@@ -1,0 +1,23 @@
+{
+  "id": "palindrom-checker-mcb42eqa",
+  "title": "Palindrom-Checker",
+  "description": "Schreibe eine Funktion, die überprüft, ob ein gegebener String ein Palindrom ist. Ein Palindrom ist ein Wort, das vorwärts und rückwärts gelesen identisch ist. Ignoriere dabei Groß-/Kleinschreibung und Leerzeichen.\n\nBeispiele:\n- isPalindrome(\"racecar\") → true\n- isPalindrome(\"A man a plan a canal Panama\") → true\n- isPalindrome(\"race a car\") → false\n- isPalindrome(\"hello\") → false",
+  "difficulty": "easy",
+  "language": "javascript",
+  "tags": [
+    "string-manipulation",
+    "two-pointers",
+    "palindrome",
+    "beginner",
+    "text-processing"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-24T22:42:37.158Z",
+  "status": "approved",
+  "starterCode": "#include <iostream>\n#include <string>\n#include <algorithm>\n#include <cctype>\nusing namespace std;\n\nbool isPalindrome(string s) {\n    // Dein Code hier\n    \n}\n\nint main() {\n    // Test cases\n    cout << boolalpha;\n    cout << isPalindrome(\"racecar\") << endl;  // Expected: true\n    cout << isPalindrome(\"A man a plan a canal Panama\") << endl;  // Expected: true\n    cout << isPalindrome(\"race a car\") << endl;  // Expected: false\n    cout << isPalindrome(\"hello\") << endl;  // Expected: false\n    \n    return 0;\n}",
+  "solution": "#include <iostream>\n#include <string>\n#include <algorithm>\n#include <cctype>\nusing namespace std;\n\nbool isPalindrome(string s) {\n    // String bereinigen: nur Buchstaben und Zahlen, alles in Kleinbuchstaben\n    string cleaned = \"\";\n    for (char c : s) {\n        if (isalnum(c)) {\n            cleaned += tolower(c);\n        }\n    }\n    \n    // Zwei-Zeiger-Ansatz\n    int left = 0;\n    int right = cleaned.length() - 1;\n    \n    while (left < right) {\n        if (cleaned[left] != cleaned[right]) {\n            return false;\n        }\n        left++;\n        right--;\n    }\n    \n    return true;\n}\n\nint main() {\n    // Test cases\n    cout << boolalpha;\n    cout << isPalindrome(\"racecar\") << endl;  // Expected: true\n    cout << isPalindrome(\"A man a plan a canal Panama\") << endl;  // Expected: true\n    cout << isPalindrome(\"race a car\") << endl;  // Expected: false\n    cout << isPalindrome(\"hello\") << endl;  // Expected: false\n    \n    return 0;\n}",
+  "tests": "// Automatisch generierte Test Cases\n// isPalindrome(\"racecar\") sollte true zurückgeben\n// isPalindrome(\"A man a plan a canal Panama\") sollte true zurückgeben\n// isPalindrome(\"race a car\") sollte false zurückgeben\n// isPalindrome(\"hello\") sollte false zurückgeben\n// isPalindrome(\"\") sollte true zurückgeben\n// isPalindrome(\"a\") sollte true zurückgeben",
+  "testClassName": "Tests",
+  "mainClassName": "Palindromchecker",
+  "functionName": "palindromchecker"
+}
