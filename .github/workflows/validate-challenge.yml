@@ -1193,7 +1193,7 @@ jobs:
           REPORT_FILE="validation-reports/challenge-validation-$(date +%Y%m%d-%H%M%S).md"
           
           # Start report
-          cat > "$REPORT_FILE" << 'EOF'
+          echo "# 🎯 Challenge Validation Report" > "$REPORT_FILE"
           # 🎯 Challenge Validation Report
           
           **Generated:** $(date)
