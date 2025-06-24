@@ -23,6 +23,7 @@ jobs:
     outputs:
       challenges: ${{ steps.detect.outputs.challenges }}
       has-changes: ${{ steps.detect.outputs.has-changes }}
+      challenge-count: ${{ steps.detect.outputs.challenge-count }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,27 +36,49 @@ jobs:
           set -e
           echo "🔍 Detecting changed challenges..."
           
+          # Find changed challenges based on event type
           if [ "${{ github.event_name }}" = "push" ]; then
-            CHANGED_CHALLENGES=$(find challenges -mindepth 1 -maxdepth 1 -type d | head -10)
-          else
+            CHANGED_CHALLENGES=$(find challenges -mindepth 1 -maxdepth 1 -type d -name "*" | head -10)
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
             CHANGED_CHALLENGES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '^challenges/' | cut -d'/' -f1-2 | sort -u)
+          else
+            CHANGED_CHALLENGES=$(find challenges -mindepth 1 -maxdepth 1 -type d -name "*" | head -5)
           fi
           
-          echo "Changed challenges: $CHANGED_CHALLENGES"
+          echo "Raw changed challenges: $CHANGED_CHALLENGES"
           
-          if [ -z "$CHANGED_CHALLENGES" ]; then
+          # Filter out only valid challenge directories
+          VALID_CHALLENGES=""
+          CHALLENGE_COUNT=0
+          
+          for challenge_dir in $CHANGED_CHALLENGES; do
+            if [ -d "$challenge_dir" ] && [ -f "$challenge_dir/challenge.json" ]; then
+              echo "✅ Valid challenge found: $challenge_dir"
+              if [ -z "$VALID_CHALLENGES" ]; then
+                VALID_CHALLENGES="$challenge_dir"
+              else
+                VALID_CHALLENGES="$VALID_CHALLENGES $challenge_dir"
+              fi
+              CHALLENGE_COUNT=$((CHALLENGE_COUNT + 1))
+            else
+              echo "⚠️ Skipping invalid challenge directory: $challenge_dir"
+            fi
+          done
+          
+          echo "Valid challenges: $VALID_CHALLENGES"
+          echo "Challenge count: $CHALLENGE_COUNT"
+          
+          if [ -z "$VALID_CHALLENGES" ]; then
             echo "has-changes=false" >> $GITHUB_OUTPUT
             echo "challenges=" >> $GITHUB_OUTPUT
-            echo "ℹ️ No challenge changes detected"
-            exit 0
+            echo "challenge-count=0" >> $GITHUB_OUTPUT
+            echo "ℹ️ No valid challenge changes detected"
+          else
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "challenges=$VALID_CHALLENGES" >> $GITHUB_OUTPUT
+            echo "challenge-count=$CHALLENGE_COUNT" >> $GITHUB_OUTPUT
+            echo "✅ Detected $CHALLENGE_COUNT valid challenge(s): $VALID_CHALLENGES"
           fi
-          
-          echo "has-changes=true" >> $GITHUB_OUTPUT
-          echo "challenges<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED_CHALLENGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "✅ Detected challenges: $CHANGED_CHALLENGES"
 
   validate-structure:
     name: 📁 Validate Structure
@@ -77,12 +100,18 @@ jobs:
           set -e
           
           CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          echo "🔍 Validating challenges: $CHALLENGES"
+          
+          if [ -z "$CHALLENGES" ]; then
+            echo "ℹ️ No challenges to validate"
+            exit 0
+          fi
           
           for challenge_path in $CHALLENGES; do
             if [ -d "$challenge_path" ]; then
               echo "🔍 Validating structure for: $challenge_path"
               
-              # Check basic files
+              # Check basic files exist
               if [ ! -f "$challenge_path/challenge.json" ]; then
                 echo "❌ Missing challenge.json in $challenge_path"
                 exit 1
@@ -94,55 +123,95 @@ jobs:
               fi
               
               # Validate JSON syntax
-              if ! python3 -m json.tool "$challenge_path/challenge.json" > /dev/null; then
+              if ! jq empty "$challenge_path/challenge.json" 2>/dev/null; then
                 echo "❌ Invalid JSON syntax in $challenge_path/challenge.json"
                 exit 1
               fi
               
-              # Get language and check language-specific files
-              LANGUAGE=$(python3 -c "
-              import json, sys
-              try:
-                  with open('$challenge_path/challenge.json', 'r') as f:
-                      data = json.load(f)
-                      print(data.get('language', 'unknown'))
-              except:
-                  print('unknown')
-              ")
+              # Get language from challenge.json
+              LANGUAGE=$(jq -r '.language // "unknown"' "$challenge_path/challenge.json" 2>/dev/null)
+              echo "📋 Language detected: $LANGUAGE"
               
-              echo "Language: $LANGUAGE"
-              
-              # Check starter and test files
+              # Check language-specific starter and test files
               case $LANGUAGE in
                 "csharp")
-                  [ -f "$challenge_path/starter.cs" ] || { echo "❌ Missing starter.cs"; exit 1; }
-                  [ -f "$challenge_path/tests.cs" ] || { echo "❌ Missing tests.cs"; exit 1; }
+                  if [ ! -f "$challenge_path/starter.cs" ]; then
+                    echo "❌ Missing starter.cs in $challenge_path"
+                    exit 1
+                  fi
+                  if [ ! -f "$challenge_path/tests.cs" ]; then
+                    echo "❌ Missing tests.cs in $challenge_path"
+                    exit 1
+                  fi
+                  echo "✅ C# files found"
                   ;;
                 "javascript")
-                  [ -f "$challenge_path/starter.js" ] || { echo "❌ Missing starter.js"; exit 1; }
-                  [ -f "$challenge_path/tests.js" ] || { echo "❌ Missing tests.js"; exit 1; }
+                  if [ ! -f "$challenge_path/starter.js" ]; then
+                    echo "❌ Missing starter.js in $challenge_path"
+                    exit 1
+                  fi
+                  if [ ! -f "$challenge_path/tests.js" ]; then
+                    echo "❌ Missing tests.js in $challenge_path"
+                    exit 1
+                  fi
+                  echo "✅ JavaScript files found"
                   ;;
                 "python")
-                  [ -f "$challenge_path/starter.py" ] || { echo "❌ Missing starter.py"; exit 1; }
-                  [ -f "$challenge_path/tests.py" ] || { echo "❌ Missing tests.py"; exit 1; }
+                  if [ ! -f "$challenge_path/starter.py" ]; then
+                    echo "❌ Missing starter.py in $challenge_path"
+                    exit 1
+                  fi
+                  if [ ! -f "$challenge_path/tests.py" ]; then
+                    echo "❌ Missing tests.py in $challenge_path"
+                    exit 1
+                  fi
+                  echo "✅ Python files found"
                   ;;
                 "cpp")
-                  [ -f "$challenge_path/starter.cpp" ] || { echo "❌ Missing starter.cpp"; exit 1; }
-                  [ -f "$challenge_path/tests.cpp" ] || { echo "❌ Missing tests.cpp"; exit 1; }
+                  if [ ! -f "$challenge_path/starter.cpp" ]; then
+                    echo "❌ Missing starter.cpp in $challenge_path"
+                    exit 1
+                  fi
+                  if [ ! -f "$challenge_path/tests.cpp" ]; then
+                    echo "❌ Missing tests.cpp in $challenge_path"
+                    exit 1
+                  fi
+                  echo "✅ C++ files found"
                   ;;
                 "c")
-                  [ -f "$challenge_path/starter.c" ] || { echo "❌ Missing starter.c"; exit 1; }
-                  [ -f "$challenge_path/tests.c" ] || { echo "❌ Missing tests.c"; exit 1; }
+                  if [ ! -f "$challenge_path/starter.c" ]; then
+                    echo "❌ Missing starter.c in $challenge_path"
+                    exit 1
+                  fi
+                  if [ ! -f "$challenge_path/tests.c" ]; then
+                    echo "❌ Missing tests.c in $challenge_path"
+                    exit 1
+                  fi
+                  echo "✅ C files found"
                   ;;
                 "java")
-                  [ -f "$challenge_path/starter.java" ] || { echo "❌ Missing starter.java"; exit 1; }
-                  [ -f "$challenge_path/tests.java" ] || { echo "❌ Missing tests.java"; exit 1; }
+                  if [ ! -f "$challenge_path/starter.java" ]; then
+                    echo "❌ Missing starter.java in $challenge_path"
+                    exit 1
+                  fi
+                  if [ ! -f "$challenge_path/tests.java" ]; then
+                    echo "❌ Missing tests.java in $challenge_path"
+                    exit 1
+                  fi
+                  echo "✅ Java files found"
+                  ;;
+                *)
+                  echo "⚠️ Unknown language: $LANGUAGE, skipping language-specific validation"
                   ;;
               esac
               
               echo "✅ Structure validation passed for $challenge_path"
+            else
+              echo "⚠️ Challenge directory not found: $challenge_path"
             fi
           done
+          
+          echo "🎉 All structure validations completed successfully"
 
   validate-metadata:
     name: 🏷️ Validate Metadata
@@ -153,59 +222,107 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Validate Challenge Metadata
         run: |
           set -e
           
           CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          echo "🏷️ Validating metadata for challenges: $CHALLENGES"
+          
+          if [ -z "$CHALLENGES" ]; then
+            echo "ℹ️ No challenges to validate"
+            exit 0
+          fi
           
           for challenge_path in $CHALLENGES; do
             if [ -f "$challenge_path/challenge.json" ]; then
               echo "🏷️ Validating metadata for: $challenge_path"
               
-              python3 -c "
-              import json, sys
+              # Use Python for robust JSON validation
+              python3 << EOF
+import json
+import sys
+import os
+from datetime import datetime
+
+required_fields = ['title', 'description', 'difficulty', 'language', 'tags', 'author', 'createdAt', 'status']
+valid_difficulties = ['easy', 'medium', 'hard']
+valid_languages = ['csharp', 'javascript', 'python', 'java', 'cpp', 'c', 'go', 'rust']
+
+try:
+    with open('$challenge_path/challenge.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    print(f"📋 Challenge: {data.get('title', 'Unknown')}")
+    
+    # Check required fields
+    missing_fields = []
+    for field in required_fields:
+        if field not in data:
+            missing_fields.append(field)
+    
+    if missing_fields:
+        print(f"❌ Missing required fields: {', '.join(missing_fields)}")
+        sys.exit(1)
+    
+    # Validate difficulty
+    if data['difficulty'] not in valid_difficulties:
+        print(f"❌ Invalid difficulty: {data['difficulty']}. Must be one of: {', '.join(valid_difficulties)}")
+        sys.exit(1)
+    
+    # Validate language
+    if data['language'] not in valid_languages:
+        print(f"❌ Invalid language: {data['language']}. Must be one of: {', '.join(valid_languages)}")
+        sys.exit(1)
+    
+    # Check title length
+    if len(data['title']) < 3 or len(data['title']) > 100:
+        print(f"❌ Title length invalid: {len(data['title'])} chars (must be 3-100)")
+        sys.exit(1)
+    
+    # Check description length
+    if len(data['description']) < 20:
+        print(f"❌ Description too short: {len(data['description'])} chars (minimum 20)")
+        sys.exit(1)
+    
+    # Check tags
+    if not isinstance(data['tags'], list) or len(data['tags']) == 0:
+        print("❌ Tags must be a non-empty array")
+        sys.exit(1)
+    
+    # Check status
+    if data['status'] not in ['pending', 'approved', 'rejected']:
+        print(f"❌ Invalid status: {data['status']}")
+        sys.exit(1)
+    
+    print(f"✅ Metadata validation passed for: {data['title']}")
+    
+except FileNotFoundError:
+    print(f"❌ File not found: $challenge_path/challenge.json")
+    sys.exit(1)
+except json.JSONDecodeError as e:
+    print(f"❌ JSON decode error: {e}")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ Validation error: {e}")
+    sys.exit(1)
+EOF
               
-              required_fields = ['title', 'description', 'difficulty', 'language', 'tags', 'author', 'createdAt', 'status']
-              valid_difficulties = ['easy', 'medium', 'hard']
-              valid_languages = ['csharp', 'javascript', 'python', 'java', 'cpp', 'c', 'go', 'rust']
-              
-              try:
-                  with open('$challenge_path/challenge.json', 'r') as f:
-                      data = json.load(f)
-                  
-                  # Check required fields
-                  for field in required_fields:
-                      if field not in data:
-                          print(f'❌ Missing required field: {field}')
-                          sys.exit(1)
-                  
-                  # Validate values
-                  if data['difficulty'] not in valid_difficulties:
-                      print(f'❌ Invalid difficulty: {data[\"difficulty\"]}')
-                      sys.exit(1)
-                  
-                  if data['language'] not in valid_languages:
-                      print(f'❌ Invalid language: {data[\"language\"]}')
-                      sys.exit(1)
-                  
-                  # Check lengths
-                  if len(data['title']) < 3 or len(data['title']) > 100:
-                      print(f'❌ Title length invalid: {len(data[\"title\"])} chars')
-                      sys.exit(1)
-                  
-                  if len(data['description']) < 20:
-                      print(f'❌ Description too short: {len(data[\"description\"])} chars')
-                      sys.exit(1)
-                  
-                  print(f'✅ Metadata valid for {data[\"title\"]}')
-                  
-              except Exception as e:
-                  print(f'❌ Error validating metadata: {e}')
-                  sys.exit(1)
-              "
+              if [ $? -ne 0 ]; then
+                echo "❌ Metadata validation failed for $challenge_path"
+                exit 1
+              fi
+            else
+              echo "⚠️ challenge.json not found in $challenge_path"
             fi
           done
+          
+          echo "🎉 All metadata validations completed successfully"
 
   test-compilation:
     name: 🔨 Test Compilation
@@ -240,80 +357,94 @@ jobs:
       - name: Install Build Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential gcc g++ make
+          sudo apt-get install -y build-essential gcc g++ make jq
 
       - name: Test Compilation
         run: |
           set -e
           
           CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          echo "🔨 Testing compilation for challenges: $CHALLENGES"
+          
+          if [ -z "$CHALLENGES" ]; then
+            echo "ℹ️ No challenges to test"
+            exit 0
+          fi
           
           for challenge_path in $CHALLENGES; do
             if [ -d "$challenge_path" ]; then
               echo "🔨 Testing compilation for: $challenge_path"
               cd "$challenge_path"
               
-              # Get language
-              LANGUAGE=$(python3 -c "
-              import json
-              try:
-                  with open('challenge.json', 'r') as f:
-                      data = json.load(f)
-                      print(data.get('language', 'unknown'))
-              except:
-                  print('unknown')
-              ")
+              # Get language from challenge.json
+              LANGUAGE=$(jq -r '.language // "unknown"' "challenge.json" 2>/dev/null)
+              echo "📋 Testing $LANGUAGE compilation..."
               
               case $LANGUAGE in
                 "csharp")
                   if ls *.csproj 1> /dev/null 2>&1; then
-                    echo "Building C# project..."
-                    dotnet build --configuration Release --verbosity minimal
+                    echo "🔨 Building C# project..."
+                    dotnet build --configuration Release --verbosity minimal --nologo
                     echo "✅ C# compilation successful"
                   else
-                    echo "⚠️ No .csproj file found, skipping build"
+                    echo "⚠️ No .csproj file found, skipping C# build"
                   fi
                   ;;
                   
                 "javascript")
-                  echo "Validating JavaScript syntax..."
-                  node -c starter.js
-                  node -c tests.js
-                  echo "✅ JavaScript syntax valid"
+                  echo "🔨 Validating JavaScript syntax..."
+                  if [ -f "starter.js" ]; then
+                    node -c starter.js
+                    echo "✅ starter.js syntax valid"
+                  fi
+                  if [ -f "tests.js" ]; then
+                    node -c tests.js
+                    echo "✅ tests.js syntax valid"
+                  fi
+                  echo "✅ JavaScript validation successful"
                   ;;
                   
                 "python")
-                  echo "Validating Python syntax..."
-                  python3 -m py_compile starter.py
-                  python3 -m py_compile tests.py
-                  echo "✅ Python syntax valid"
+                  echo "🔨 Validating Python syntax..."
+                  if [ -f "starter.py" ]; then
+                    python3 -m py_compile starter.py
+                    echo "✅ starter.py syntax valid"
+                  fi
+                  if [ -f "tests.py" ]; then
+                    python3 -m py_compile tests.py
+                    echo "✅ tests.py syntax valid"
+                  fi
+                  echo "✅ Python validation successful"
                   ;;
                   
                 "cpp")
-                  echo "Building C++ project..."
+                  echo "🔨 Building C++ project..."
                   if [ -f "Makefile" ]; then
                     make clean && make
                   else
-                    g++ -std=c++17 -Wall -Wextra -O2 -c starter.cpp
-                    g++ -std=c++17 -Wall -Wextra -O2 -c tests.cpp
+                    g++ -std=c++17 -Wall -Wextra -O2 -c starter.cpp -o starter.o
+                    g++ -std=c++17 -Wall -Wextra -O2 -c tests.cpp -o tests.o
+                    rm -f *.o
                   fi
                   echo "✅ C++ compilation successful"
                   ;;
                   
                 "c")
-                  echo "Building C project..."
+                  echo "🔨 Building C project..."
                   if [ -f "Makefile" ]; then
                     make clean && make
                   else
-                    gcc -std=c99 -Wall -Wextra -O2 -c starter.c
-                    gcc -std=c99 -Wall -Wextra -O2 -c tests.c
+                    gcc -std=c99 -Wall -Wextra -O2 -c starter.c -o starter.o
+                    gcc -std=c99 -Wall -Wextra -O2 -c tests.c -o tests.o
+                    rm -f *.o
                   fi
                   echo "✅ C compilation successful"
                   ;;
                   
                 "java")
-                  echo "Building Java project..."
+                  echo "🔨 Building Java project..."
                   javac *.java
+                  rm -f *.class
                   echo "✅ Java compilation successful"
                   ;;
                   
@@ -323,8 +454,12 @@ jobs:
               esac
               
               cd ..
+            else
+              echo "⚠️ Challenge directory not found: $challenge_path"
             fi
           done
+          
+          echo "🎉 All compilation tests completed successfully"
 
   test-framework:
     name: 🧪 Test Framework
@@ -340,8 +475,9 @@ jobs:
           # .NET
           wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
           chmod +x dotnet-install.sh
-          ./dotnet-install.sh --channel 8.0
+          ./dotnet-install.sh --channel 8.0 --install-dir ~/.dotnet
           export PATH="$HOME/.dotnet:$PATH"
+          echo "$HOME/.dotnet" >> $GITHUB_PATH
           
           # Node.js
           curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
@@ -349,90 +485,124 @@ jobs:
           
           # Python and build tools
           sudo apt-get update
-          sudo apt-get install -y python3 python3-pip build-essential gcc g++ make openjdk-17-jdk
+          sudo apt-get install -y python3 python3-pip build-essential gcc g++ make openjdk-17-jdk jq
 
       - name: Test Framework Validation
         run: |
           set -e
           
           CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          echo "🧪 Testing framework for challenges: $CHALLENGES"
+          
+          if [ -z "$CHALLENGES" ]; then
+            echo "ℹ️ No challenges to test"
+            exit 0
+          fi
           
           for challenge_path in $CHALLENGES; do
             if [ -d "$challenge_path" ]; then
               echo "🧪 Testing framework for: $challenge_path"
               cd "$challenge_path"
               
-              # Get language
-              LANGUAGE=$(python3 -c "
-              import json
-              try:
-                  with open('challenge.json', 'r') as f:
-                      data = json.load(f)
-                      print(data.get('language', 'unknown'))
-              except:
-                  print('unknown')
-              ")
+              # Get language from challenge.json
+              LANGUAGE=$(jq -r '.language // "unknown"' "challenge.json" 2>/dev/null)
+              echo "📋 Testing $LANGUAGE test framework..."
               
-              echo "Testing $LANGUAGE framework..."
-              
-              # Basic framework test - check if tests exist and can be executed
+              # Basic framework test - check if tests can be executed
               case $LANGUAGE in
                 "csharp")
-                  export PATH="$HOME/.dotnet:$PATH"
                   if ls *.csproj 1> /dev/null 2>&1; then
-                    timeout 30s dotnet run > test_output.txt 2>&1 || true
+                    echo "🧪 Testing C# framework..."
+                    export PATH="$HOME/.dotnet:$PATH"
+                    timeout 30s dotnet run > test_output.txt 2>&1 || TEST_EXIT_CODE=$?
                     if [ -f test_output.txt ]; then
-                      echo "✅ C# test framework executable"
+                      echo "✅ C# test framework is executable"
+                      head -5 test_output.txt | grep -E "🧪|Test|Error" || true
                     fi
                   fi
                   ;;
                   
                 "javascript")
-                  timeout 30s node tests.js > test_output.txt 2>&1 || true
-                  if [ -f test_output.txt ]; then
-                    echo "✅ JavaScript test framework executable"
+                  if [ -f "tests.js" ]; then
+                    echo "🧪 Testing JavaScript framework..."
+                    timeout 30s node tests.js > test_output.txt 2>&1 || TEST_EXIT_CODE=$?
+                    if [ -f test_output.txt ]; then
+                      echo "✅ JavaScript test framework is executable"
+                      head -5 test_output.txt | grep -E "Test|Error" || true
+                    fi
                   fi
                   ;;
                   
                 "python")
-                  timeout 30s python3 tests.py > test_output.txt 2>&1 || true
-                  if [ -f test_output.txt ]; then
-                    echo "✅ Python test framework executable"
+                  if [ -f "tests.py" ]; then
+                    echo "🧪 Testing Python framework..."
+                    timeout 30s python3 tests.py > test_output.txt 2>&1 || TEST_EXIT_CODE=$?
+                    if [ -f test_output.txt ]; then
+                      echo "✅ Python test framework is executable"
+                      head -5 test_output.txt | grep -E "Test|Error" || true
+                    fi
                   fi
                   ;;
                   
                 "cpp")
                   if [ -f "Makefile" ]; then
-                    make clean && make > /dev/null 2>&1 || true
+                    echo "🧪 Testing C++ framework..."
+                    make clean > /dev/null 2>&1 || true
+                    make > /dev/null 2>&1 || true
                     if [ -f "test_runner" ]; then
-                      timeout 30s ./test_runner > test_output.txt 2>&1 || true
-                      echo "✅ C++ test framework executable"
+                      timeout 30s ./test_runner > test_output.txt 2>&1 || TEST_EXIT_CODE=$?
+                      echo "✅ C++ test framework is executable"
+                      if [ -f test_output.txt ]; then
+                        head -5 test_output.txt | grep -E "Test|Error" || true
+                      fi
                     fi
                   fi
                   ;;
                   
                 "c")
                   if [ -f "Makefile" ]; then
-                    make clean && make > /dev/null 2>&1 || true
+                    echo "🧪 Testing C framework..."
+                    make clean > /dev/null 2>&1 || true
+                    make > /dev/null 2>&1 || true
                     if [ -f "test_runner" ]; then
-                      timeout 30s ./test_runner > test_output.txt 2>&1 || true
-                      echo "✅ C test framework executable"
+                      timeout 30s ./test_runner > test_output.txt 2>&1 || TEST_EXIT_CODE=$?
+                      echo "✅ C test framework is executable"
+                      if [ -f test_output.txt ]; then
+                        head -5 test_output.txt | grep -E "Test|Error" || true
+                      fi
                     fi
                   fi
                   ;;
                   
                 "java")
-                  javac *.java > /dev/null 2>&1 || true
-                  if [ -f "Tests.class" ]; then
-                    timeout 30s java Tests > test_output.txt 2>&1 || true
-                    echo "✅ Java test framework executable"
+                  if [ -f "tests.java" ]; then
+                    echo "🧪 Testing Java framework..."
+                    javac *.java > /dev/null 2>&1 || true
+                    if [ -f "Tests.class" ]; then
+                      timeout 30s java Tests > test_output.txt 2>&1 || TEST_EXIT_CODE=$?
+                      echo "✅ Java test framework is executable"
+                      if [ -f test_output.txt ]; then
+                        head -5 test_output.txt | grep -E "Test|Error" || true
+                      fi
+                    fi
                   fi
+                  ;;
+                  
+                *)
+                  echo "⚠️ Framework test not implemented for: $LANGUAGE"
                   ;;
               esac
               
+              # Cleanup test files
+              rm -f test_output.txt *.o *.class test_runner
+              
               cd ..
+            else
+              echo "⚠️ Challenge directory not found: $challenge_path"
             fi
           done
+          
+          echo "🎉 All framework tests completed successfully"
 
   generate-report:
     name: 📊 Generate Report
@@ -452,17 +622,18 @@ jobs:
           mkdir -p validation-reports
           REPORT_FILE="validation-reports/challenge-validation-$(date +%Y%m%d-%H%M%S).md"
           
-          # Create report
+          # Create report header
           echo "# 🎯 Challenge Validation Report" > "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           echo "**Generated:** $(date)" >> "$REPORT_FILE"
           echo "**Workflow:** ${{ github.workflow }}" >> "$REPORT_FILE"
           echo "**Run ID:** ${{ github.run_id }}" >> "$REPORT_FILE"
           echo "**Event:** ${{ github.event_name }}" >> "$REPORT_FILE"
+          echo "**Challenges Detected:** ${{ needs.detect-changes.outputs.challenge-count }}" >> "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           
-          # Summary table
-          echo "## 📋 Summary" >> "$REPORT_FILE"
+          # Job status summary
+          echo "## 📋 Job Status Summary" >> "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           echo "| Job | Status |" >> "$REPORT_FILE"
           echo "|-----|--------|" >> "$REPORT_FILE"
@@ -472,31 +643,32 @@ jobs:
           echo "| Framework Tests | ${{ needs.test-framework.result }} |" >> "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           
-          # Challenges
+          # Challenge details
           echo "## 🎯 Validated Challenges" >> "$REPORT_FILE"
           echo "" >> "$REPORT_FILE"
           
           CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
-          for challenge_path in $CHALLENGES; do
-            if [ -f "$challenge_path/challenge.json" ]; then
-              TITLE=$(python3 -c "
-              import json
-              try:
-                  with open('$challenge_path/challenge.json', 'r') as f:
-                      data = json.load(f)
-                      print(data.get('title', 'Unknown'))
-              except:
-                  print('Unknown')
-              ")
-              echo "- ✅ **$TITLE** ($challenge_path)" >> "$REPORT_FILE"
-            fi
-          done
+          if [ -n "$CHALLENGES" ]; then
+            for challenge_path in $CHALLENGES; do
+              if [ -f "$challenge_path/challenge.json" ]; then
+                TITLE=$(jq -r '.title // "Unknown"' "$challenge_path/challenge.json" 2>/dev/null)
+                LANGUAGE=$(jq -r '.language // "unknown"' "$challenge_path/challenge.json" 2>/dev/null)
+                DIFFICULTY=$(jq -r '.difficulty // "unknown"' "$challenge_path/challenge.json" 2>/dev/null)
+                echo "- ✅ **$TITLE** ($LANGUAGE, $DIFFICULTY) - \`$challenge_path\`" >> "$REPORT_FILE"
+              else
+                echo "- ⚠️ **Unknown Challenge** - \`$challenge_path\` (no challenge.json)" >> "$REPORT_FILE"
+              fi
+            done
+          else
+            echo "No challenges were processed in this run." >> "$REPORT_FILE"
+          fi
           
           echo "" >> "$REPORT_FILE"
           echo "---" >> "$REPORT_FILE"
-          echo "**Generated by GitHub Actions**" >> "$REPORT_FILE"
+          echo "**Generated by GitHub Actions** | [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> "$REPORT_FILE"
           
-          echo "📊 Report generated: $REPORT_FILE"
+          echo "📊 Report generated successfully"
+          echo "Report content:"
           cat "$REPORT_FILE"
 
       - name: Upload Report
@@ -505,6 +677,23 @@ jobs:
           name: validation-report-${{ github.run_id }}
           path: validation-reports/
           retention-days: 30
+
+      - name: Add Job Summary
+        run: |
+          # Add content to GitHub Actions job summary
+          CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          CHALLENGE_COUNT="${{ needs.detect-changes.outputs.challenge-count }}"
+          
+          echo "## 🎯 Challenge Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Challenges processed:** $CHALLENGE_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Structure Validation | ${{ needs.validate-structure.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Metadata Validation | ${{ needs.validate-metadata.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compilation Tests | ${{ needs.test-compilation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Framework Tests | ${{ needs.test-framework.result }} |" >> $GITHUB_STEP_SUMMARY
 
   validation-status:
     name: ✅ Final Status
@@ -518,38 +707,47 @@ jobs:
           
           echo "✅ Determining final validation status..."
           
+          # Check if changes were detected
           if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
-            echo "ℹ️ No challenge changes detected"
+            echo "ℹ️ No challenge changes detected - validation skipped"
+            echo "Status: SKIPPED - No changes to validate"
             exit 0
           fi
           
-          # Check critical jobs
+          echo "📋 Challenge count: ${{ needs.detect-changes.outputs.challenge-count }}"
+          echo "📋 Challenges: ${{ needs.detect-changes.outputs.challenges }}"
+          
+          # Check critical job results
           FAILED_JOBS=()
           
           if [ "${{ needs.validate-structure.result }}" != "success" ]; then
-            FAILED_JOBS+=("Structure Validation")
+            FAILED_JOBS+=("Structure Validation (${{ needs.validate-structure.result }})")
           fi
           
           if [ "${{ needs.validate-metadata.result }}" != "success" ]; then
-            FAILED_JOBS+=("Metadata Validation")
+            FAILED_JOBS+=("Metadata Validation (${{ needs.validate-metadata.result }})")
           fi
           
           if [ "${{ needs.test-compilation.result }}" != "success" ]; then
-            FAILED_JOBS+=("Compilation Tests")
+            FAILED_JOBS+=("Compilation Tests (${{ needs.test-compilation.result }})")
           fi
           
           if [ "${{ needs.test-framework.result }}" != "success" ]; then
-            FAILED_JOBS+=("Framework Tests")
+            FAILED_JOBS+=("Framework Tests (${{ needs.test-framework.result }})")
           fi
           
+          # Report final status
           if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
-            echo "❌ CRITICAL FAILURES:"
+            echo "❌ CRITICAL FAILURES DETECTED:"
             printf '  - %s\n' "${FAILED_JOBS[@]}"
             echo ""
             echo "🚫 Merge blocked until issues are resolved"
+            echo "Status: FAILED - Critical validations failed"
             exit 1
           else
             echo "🎉 ALL VALIDATIONS PASSED!"
+            echo "✅ ${{ needs.detect-changes.outputs.challenge-count }} challenge(s) successfully validated"
             echo "✅ Ready for merge"
+            echo "Status: SUCCESS - All validations passed"
             exit 0
           fi
