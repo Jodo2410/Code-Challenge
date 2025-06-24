@@ -1,0 +1,6 @@
+/* 
+ * 📖 REFERENZ-LÖSUNG - NUR ZUM ANSCHAUEN!
+ * Diese Datei dient nur als Referenz.
+ */
+
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
