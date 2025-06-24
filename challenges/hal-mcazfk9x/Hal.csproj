@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <StartupObject>TestRunner</StartupObject>
+    <AssemblyName>Hal</AssemblyName>
+    <RootNamespace>Hal</RootNamespace>
+    
+    <LangVersion>latest</LangVersion>
+    <UseAppHost>true</UseAppHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 🚫 Solution-Dateien ausschließen -->
+    <Compile Remove="solution.cs" />
+    <Compile Remove="**/*Solution*.cs" />
+    
+    <!-- 📖 Als Referenz behalten -->
+    <None Include="solution.cs" Condition="Exists('solution.cs')" />
+  </ItemGroup>
+
+  <!-- 📖 Build-Info -->
+  <Target Name="ShowBuildInfo" BeforeTargets="Build">
+    <Message Text="🚀 .NET 8.0 | Challenge: hAL" Importance="normal" />
+    <Message Text="📖 solution.cs als Referenz (ignoriert)" 
+             Condition="Exists('solution.cs')" 
+             Importance="normal" />
+    <Message Text="🧪 TestRunner startet Tests.RunAllTests()" 
+             Importance="normal" />
+  </Target>
+
+</Project>
