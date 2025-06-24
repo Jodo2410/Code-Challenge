@@ -1,0 +1,15 @@
+{
+  "id": "two-sum-problem-mcar0hi6",
+  "title": "Two Sum Problem",
+  "description": "Gegeben ist ein Array von Ganzzahlen und eine Zielzahl. Finde zwei Zahlen im Array, die zusammen die Zielzahl ergeben, und gib ihre Indizes zurück.",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "arrays",
+    "hashtable",
+    "algorithms"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-24T16:37:12.448Z",
+  "status": "pending"
+}
