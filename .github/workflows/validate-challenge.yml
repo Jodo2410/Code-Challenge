@@ -1,58 +1,1489 @@
-name: Validate Challenge
+name: 🎯 Challenge Validation
 
 on:
   pull_request:
+    branches: [ main, develop ]
+    paths: 
+      - 'challenges/**'
+  push:
+    branches: [ main ]
     paths:
       - 'challenges/**'
+  workflow_dispatch:
+    inputs:
+      challenge_path:
+        description: 'Spezifischer Challenge-Pfad zum Testen'
+        required: false
+        default: ''
+
+env:
+  NODE_VERSION: '18'
+  DOTNET_VERSION: '8.0.x'
+  PYTHON_VERSION: '3.11'
+  GO_VERSION: '1.21'
 
 jobs:
-  validate:
+  # 📋 1. Challenge Detection & Structure Validation
+  detect-changes:
+    name: 🔍 Detect Changed Challenges
     runs-on: ubuntu-latest
-    name: Validate Challenge Structure
-    
+    outputs:
+      challenges: ${{ steps.detect.outputs.challenges }}
+      matrix: ${{ steps.detect.outputs.matrix }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Validate Challenge Structure
-      run: |
-        echo "🔍 Validating challenge structure..."
-        
-        # Check if new challenges have required files
-        for dir in challenges/*/; do
-          if [ -d "$dir" ] && [ "$dir" != "challenges/.gitkeep" ]; then
-            echo "Checking $dir"
-            
-            # Check for required files
-            if [ ! -f "$dir/challenge.json" ]; then
-              echo "❌ Missing challenge.json in $dir"
-              exit 1
-            fi
-            
-            if [ ! -f "$dir/README.md" ]; then
-              echo "❌ Missing README.md in $dir"
-              exit 1
-            fi
-            
-            # Validate JSON syntax
-            if ! cat "$dir/challenge.json" | jq empty; then
-              echo "❌ Invalid JSON in $dir/challenge.json"
-              exit 1
-            fi
-            
-            # Check required JSON fields
-            if ! cat "$dir/challenge.json" | jq -e '.id and .title and .description and .difficulty and .language' > /dev/null; then
-              echo "❌ Missing required fields in $dir/challenge.json"
-              exit 1
-            fi
-            
-            echo "✅ $dir structure is valid"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Changed Challenges
+        id: detect
+        run: |
+          set -e
+          echo "🔍 Detecting changed challenges..."
+          
+          # Finde alle Challenge-Ordner
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.challenge_path }}" ]; then
+            # Manuell spezifizierter Pfad
+            CHANGED_CHALLENGES="${{ github.event.inputs.challenge_path }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            # Bei Push: Alle Challenges testen
+            CHANGED_CHALLENGES=$(find challenges -mindepth 1 -maxdepth 1 -type d | head -10)
+          else
+            # Bei PR: Nur geänderte Challenges
+            CHANGED_CHALLENGES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '^challenges/' | cut -d'/' -f1-2 | sort -u)
           fi
-        done
-        
-        echo "🎉 All challenges passed validation!"
-        
-    - name: Success Message
+          
+          echo "Changed challenges: $CHANGED_CHALLENGES"
+          
+          if [ -z "$CHANGED_CHALLENGES" ]; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "challenges=[]" >> $GITHUB_OUTPUT
+            echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+            echo "ℹ️ Keine Challenge-Änderungen erkannt"
+            exit 0
+          fi
+          
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+          
+          # JSON Array für Matrix aufbauen
+          CHALLENGES_JSON="["
+          MATRIX_JSON="{\"include\":["
+          FIRST=true
+          
+          for challenge_dir in $CHANGED_CHALLENGES; do
+            if [ -d "$challenge_dir" ] && [ -f "$challenge_dir/challenge.json" ]; then
+              CHALLENGE_ID=$(basename "$challenge_dir")
+              LANGUAGE=$(jq -r '.language' "$challenge_dir/challenge.json" 2>/dev/null || echo "unknown")
+              DIFFICULTY=$(jq -r '.difficulty' "$challenge_dir/challenge.json" 2>/dev/null || echo "unknown")
+              
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                CHALLENGES_JSON="$CHALLENGES_JSON,"
+                MATRIX_JSON="$MATRIX_JSON,"
+              fi
+              
+              CHALLENGES_JSON="$CHALLENGES_JSON\"$challenge_dir\""
+              MATRIX_JSON="$MATRIX_JSON{\"path\":\"$challenge_dir\",\"id\":\"$CHALLENGE_ID\",\"language\":\"$LANGUAGE\",\"difficulty\":\"$DIFFICULTY\"}"
+            fi
+          done
+          
+          CHALLENGES_JSON="$CHALLENGES_JSON]"
+          MATRIX_JSON="$MATRIX_JSON]}"
+          
+          echo "challenges=$CHALLENGES_JSON" >> $GITHUB_OUTPUT
+          echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT
+          
+          echo "✅ Detected challenges: $CHALLENGES_JSON"
+
+  # 📋 2. Structure & Metadata Validation
+  validate-structure:
+    name: 📁 Validate Structure
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Validation Tools
+        run: |
+          npm install -g ajv-cli jsonlint markdown-cli-validate
+
+      - name: Validate Challenge Structure
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          echo "🔍 Validating structure for: $CHALLENGE_PATH"
+          
+          # 1. Grundlegende Datei-Existenz prüfen
+          echo "📋 Checking required files..."
+          REQUIRED_FILES=("challenge.json" "README.md")
+          LANGUAGE="${{ matrix.language }}"
+          
+          # Sprachspezifische Dateien hinzufügen
+          case $LANGUAGE in
+            "csharp")
+              REQUIRED_FILES+=("starter.cs" "tests.cs" "TestRunner.cs" "*.csproj")
+              ;;
+            "javascript")
+              REQUIRED_FILES+=("starter.js" "tests.js")
+              ;;
+            "python")
+              REQUIRED_FILES+=("starter.py" "tests.py")
+              ;;
+            "java")
+              REQUIRED_FILES+=("starter.java" "tests.java")
+              ;;
+            "cpp")
+              REQUIRED_FILES+=("starter.cpp" "tests.cpp" "Makefile")
+              ;;
+            "c")
+              REQUIRED_FILES+=("starter.c" "tests.c" "Makefile")
+              ;;
+            "go")
+              REQUIRED_FILES+=("starter.go" "tests.go" "go.mod")
+              ;;
+            "rust")
+              REQUIRED_FILES+=("starter.rs" "tests.rs" "Cargo.toml")
+              ;;
+          esac
+          
+          for file_pattern in "${REQUIRED_FILES[@]}"; do
+            if [[ $file_pattern == *"*"* ]]; then
+              # Wildcard pattern
+              if ! ls $CHALLENGE_PATH/$file_pattern 1> /dev/null 2>&1; then
+                echo "❌ Required file pattern missing: $file_pattern"
+                exit 1
+              fi
+            else
+              if [ ! -f "$CHALLENGE_PATH/$file_pattern" ]; then
+                echo "❌ Required file missing: $file_pattern"
+                exit 1
+              fi
+            fi
+            echo "✅ Found: $file_pattern"
+          done
+
+      - name: Validate challenge.json
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          
+          echo "📋 Validating challenge.json structure..."
+          
+          # JSON Syntax Check
+          if ! jsonlint "$CHALLENGE_PATH/challenge.json" > /dev/null; then
+            echo "❌ Invalid JSON syntax in challenge.json"
+            exit 1
+          fi
+          
+          # Schema Validation
+          cat > challenge-schema.json << 'EOF'
+          {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": ["title", "description", "difficulty", "language", "tags", "author", "createdAt", "status"],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 100
+              },
+              "description": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 1000
+              },
+              "difficulty": {
+                "type": "string",
+                "enum": ["easy", "medium", "hard"]
+              },
+              "language": {
+                "type": "string",
+                "enum": ["csharp", "javascript", "python", "java", "cpp", "c", "go", "rust", "kotlin"]
+              },
+              "tags": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 1,
+                "maxItems": 10
+              },
+              "author": {
+                "type": "string",
+                "minLength": 1
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["pending", "approved", "rejected"]
+              },
+              "mainClass": {"type": "string"},
+              "entryPoint": {"type": "string"},
+              "testClass": {"type": "string"},
+              "testMethod": {"type": "string"},
+              "dependencies": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "buildSettings": {"type": "object"}
+            },
+            "additionalProperties": true
+          }
+          EOF
+          
+          if ! ajv validate -s challenge-schema.json -d "$CHALLENGE_PATH/challenge.json"; then
+            echo "❌ challenge.json does not match required schema"
+            exit 1
+          fi
+          
+          echo "✅ challenge.json is valid"
+
+      - name: Validate README.md
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          
+          echo "📋 Validating README.md..."
+          
+          # Basic markdown validation
+          if ! markdown-cli-validate "$CHALLENGE_PATH/README.md"; then
+            echo "⚠️ README.md has markdown syntax issues (non-critical)"
+          fi
+          
+          # Content validation
+          README_CONTENT=$(cat "$CHALLENGE_PATH/README.md")
+          
+          # Check required sections
+          REQUIRED_SECTIONS=("# " "## 📝 Beschreibung" "## 🎯 Schwierigkeit" "## 💻 Sprache" "## 🚀 Anweisungen")
+          
+          for section in "${REQUIRED_SECTIONS[@]}"; do
+            if [[ ! "$README_CONTENT" == *"$section"* ]]; then
+              echo "❌ Missing required section in README.md: $section"
+              exit 1
+            fi
+          done
+          
+          echo "✅ README.md structure is valid"
+
+      - name: Validate File Naming Conventions
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "📋 Validating file naming conventions..."
+          
+          # Check for solution.* files have proper reference headers
+          for solution_file in "$CHALLENGE_PATH"/solution.*; do
+            if [ -f "$solution_file" ]; then
+              if ! head -10 "$solution_file" | grep -q "REFERENZ-LÖSUNG\|REFERENCE"; then
+                echo "⚠️ Solution file should have reference header: $(basename $solution_file)"
+              fi
+            fi
+          done
+          
+          # Language-specific validations
+          case $LANGUAGE in
+            "csharp")
+              # Check .csproj exists and has proper structure
+              CSPROJ_FILE=$(find "$CHALLENGE_PATH" -name "*.csproj" | head -1)
+              if [ -f "$CSPROJ_FILE" ]; then
+                if ! grep -q "solution.cs" "$CSPROJ_FILE"; then
+                  echo "⚠️ .csproj should exclude solution.cs files"
+                fi
+              fi
+              ;;
+            "cpp"|"c")
+              # Check Makefile exists and has proper targets
+              if [ -f "$CHALLENGE_PATH/Makefile" ]; then
+                if ! grep -q "clean\|test\|debug" "$CHALLENGE_PATH/Makefile"; then
+                  echo "⚠️ Makefile should have standard targets (clean, test, debug)"
+                fi
+              fi
+              ;;
+          esac
+          
+          echo "✅ File naming conventions are valid"
+
+  # 🧪 3. Code Compilation & Syntax Tests
+  test-compilation:
+    name: 🔨 Test Compilation
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-structure]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Multi-Language Environment
+        uses: ./.github/actions/setup-languages
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Test Compilation
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "🔨 Testing compilation for $LANGUAGE challenge: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          case $LANGUAGE in
+            "csharp")
+              echo "🔨 Building C# project..."
+              if [ -f "*.csproj" ]; then
+                dotnet build --configuration Release --verbosity minimal
+                echo "✅ C# compilation successful"
+              else
+                echo "❌ No .csproj file found"
+                exit 1
+              fi
+              ;;
+              
+            "cpp")
+              echo "🔨 Building C++ project..."
+              if [ -f "Makefile" ]; then
+                make clean && make
+                echo "✅ C++ compilation successful"
+              else
+                g++ -std=c++17 -Wall -Wextra -O2 -o test_runner tests.cpp starter.cpp
+                echo "✅ C++ compilation successful (fallback)"
+              fi
+              ;;
+              
+            "c")
+              echo "🔨 Building C project..."
+              if [ -f "Makefile" ]; then
+                make clean && make
+                echo "✅ C compilation successful"
+              else
+                gcc -std=c99 -Wall -Wextra -O2 -o test_runner tests.c starter.c
+                echo "✅ C compilation successful (fallback)"
+              fi
+              ;;
+              
+            "javascript")
+              echo "🔨 Validating JavaScript syntax..."
+              node -c starter.js
+              node -c tests.js
+              echo "✅ JavaScript syntax valid"
+              ;;
+              
+            "python")
+              echo "🔨 Validating Python syntax..."
+              python -m py_compile starter.py
+              python -m py_compile tests.py
+              echo "✅ Python syntax valid"
+              ;;
+              
+            "java")
+              echo "🔨 Building Java project..."
+              javac *.java
+              echo "✅ Java compilation successful"
+              ;;
+              
+            "go")
+              echo "🔨 Building Go project..."
+              go mod tidy
+              go build -v ./...
+              echo "✅ Go compilation successful"
+              ;;
+              
+            "rust")
+              echo "🔨 Building Rust project..."
+              cargo check
+              cargo build
+              echo "✅ Rust compilation successful"
+              ;;
+              
+            *)
+              echo "⚠️ Compilation test not implemented for language: $LANGUAGE"
+              ;;
+          esac
+
+  # 🧪 4. Test Framework Validation
+  test-framework:
+    name: 🧪 Validate Test Framework
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test-compilation]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Multi-Language Environment
+        uses: ./.github/actions/setup-languages
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Test Framework Validation
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "🧪 Testing framework for $LANGUAGE challenge: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          # Backup original starter file
+          case $LANGUAGE in
+            "csharp") STARTER_FILE="starter.cs" ;;
+            "cpp") STARTER_FILE="starter.cpp" ;;
+            "c") STARTER_FILE="starter.c" ;;
+            "javascript") STARTER_FILE="starter.js" ;;
+            "python") STARTER_FILE="starter.py" ;;
+            "java") STARTER_FILE="starter.java" ;;
+            "go") STARTER_FILE="starter.go" ;;
+            "rust") STARTER_FILE="starter.rs" ;;
+            *) echo "⚠️ Unknown language: $LANGUAGE"; exit 0 ;;
+          esac
+          
+          if [ ! -f "$STARTER_FILE" ]; then
+            echo "❌ Starter file not found: $STARTER_FILE"
+            exit 1
+          fi
+          
+          # Create backup
+          cp "$STARTER_FILE" "${STARTER_FILE}.backup"
+          
+          # Test 1: Check if tests fail with incomplete starter code
+          echo "🧪 Test 1: Verifying tests fail with incomplete starter code..."
+          
+          case $LANGUAGE in
+            "csharp")
+              timeout 30s dotnet run > test_output.txt 2>&1 || true
+              if grep -q "🎉.*Tests bestanden" test_output.txt; then
+                echo "❌ Tests should fail with incomplete starter code"
+                cat test_output.txt
+                exit 1
+              fi
+              ;;
+            "cpp"|"c")
+              if [ -f "Makefile" ]; then
+                timeout 30s make test > test_output.txt 2>&1 || true
+              else
+                timeout 30s ./test_runner > test_output.txt 2>&1 || true
+              fi
+              if grep -q "🎉.*Tests bestanden" test_output.txt; then
+                echo "❌ Tests should fail with incomplete starter code"
+                exit 1
+              fi
+              ;;
+            "javascript")
+              timeout 30s node tests.js > test_output.txt 2>&1 || true
+              if grep -q "Tests bestanden" test_output.txt; then
+                echo "❌ Tests should fail with incomplete starter code"
+                exit 1
+              fi
+              ;;
+            "python")
+              timeout 30s python tests.py > test_output.txt 2>&1 || true
+              if grep -q "Tests bestanden" test_output.txt; then
+                echo "❌ Tests should fail with incomplete starter code"
+                exit 1
+              fi
+              ;;
+          esac
+          
+          echo "✅ Tests correctly fail with incomplete starter code"
+          
+          # Test 2: Check if solution file exists and tests pass with it
+          SOLUTION_FILE="${STARTER_FILE/starter/solution}"
+          if [ -f "$SOLUTION_FILE" ]; then
+            echo "🧪 Test 2: Verifying tests pass with solution code..."
+            
+            # Copy solution to starter (temporarily)
+            cp "$SOLUTION_FILE" "$STARTER_FILE"
+            
+            case $LANGUAGE in
+              "csharp")
+                # Remove reference header and replace class names if needed
+                sed -i '/REFERENZ-LÖSUNG/,/\*\//d' "$STARTER_FILE"
+                sed -i 's/Solution[[:space:]]*{/Challengename/g' "$STARTER_FILE" || true
+                dotnet build > /dev/null 2>&1
+                timeout 30s dotnet run > test_output_solution.txt 2>&1
+                if ! grep -q "🎉.*Tests bestanden" test_output_solution.txt; then
+                  echo "❌ Tests should pass with solution code"
+                  cat test_output_solution.txt
+                  exit 1
+                fi
+                ;;
+              "cpp"|"c")
+                # Remove reference header
+                sed -i '/REFERENZ-LÖSUNG/,/\*\//d' "$STARTER_FILE"
+                if [ -f "Makefile" ]; then
+                  make clean && make > /dev/null 2>&1
+                  timeout 30s make test > test_output_solution.txt 2>&1
+                else
+                  # Rebuild and run
+                  rm -f test_runner
+                  if [[ "$LANGUAGE" == "cpp" ]]; then
+                    g++ -std=c++17 -Wall -Wextra -O2 -o test_runner tests.cpp starter.cpp > /dev/null 2>&1
+                  else
+                    gcc -std=c99 -Wall -Wextra -O2 -o test_runner tests.c starter.c > /dev/null 2>&1
+                  fi
+                  timeout 30s ./test_runner > test_output_solution.txt 2>&1
+                fi
+                if ! grep -q "🎉.*Tests bestanden" test_output_solution.txt; then
+                  echo "❌ Tests should pass with solution code"
+                  cat test_output_solution.txt
+                  exit 1
+                fi
+                ;;
+              "javascript")
+                sed -i '/REFERENZ-LÖSUNG/,/\*\//d' "$STARTER_FILE"
+                timeout 30s node tests.js > test_output_solution.txt 2>&1
+                if ! grep -q "Tests bestanden" test_output_solution.txt; then
+                  echo "❌ Tests should pass with solution code"
+                  cat test_output_solution.txt
+                  exit 1
+                fi
+                ;;
+              "python")
+                sed -i '/REFERENZ-LÖSUNG/,/"""$/d' "$STARTER_FILE"
+                timeout 30s python tests.py > test_output_solution.txt 2>&1
+                if ! grep -q "Tests bestanden" test_output_solution.txt; then
+                  echo "❌ Tests should pass with solution code"
+                  cat test_output_solution.txt
+                  exit 1
+                fi
+                ;;
+            esac
+            
+            echo "✅ Tests correctly pass with solution code"
+          else
+            echo "⚠️ No solution file found, skipping solution test"
+          fi
+          
+          # Restore original starter file
+          mv "${STARTER_FILE}.backup" "$STARTER_FILE"
+          
+          echo "✅ Test framework validation completed successfully"
+
+  # 📊 5. Code Quality & Best Practices
+  code-quality:
+    name: 📊 Code Quality Check
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-structure]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Multi-Language Environment
+        uses: ./.github/actions/setup-languages
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Code Quality Analysis
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "📊 Running code quality checks for $LANGUAGE challenge: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          case $LANGUAGE in
+            "csharp")
+              echo "📊 C# Code Analysis..."
+              # Install .NET analyzers
+              dotnet tool install -g Microsoft.CodeAnalysis.NetAnalyzers || true
+              
+              # Run analysis
+              dotnet build --verbosity minimal --configuration Release /p:TreatWarningsAsErrors=false
+              
+              # Check for common issues
+              if grep -r "Console.ReadLine\|Console.Read[^L]" . --include="*.cs"; then
+                echo "⚠️ Found interactive input in code (might cause test hangs)"
+              fi
+              ;;
+              
+            "cpp")
+              echo "📊 C++ Code Analysis..."
+              # Static analysis with cppcheck if available
+              if command -v cppcheck >/dev/null 2>&1; then
+                cppcheck --enable=warning,style,performance --std=c++17 *.cpp *.h 2>/dev/null || true
+              fi
+              
+              # Check for common issues
+              if grep -r "system\|exec" . --include="*.cpp" --include="*.h"; then
+                echo "⚠️ Found potentially unsafe system calls"
+              fi
+              ;;
+              
+            "c")
+              echo "📊 C Code Analysis..."
+              if command -v cppcheck >/dev/null 2>&1; then
+                cppcheck --enable=warning,style,performance --std=c99 *.c *.h 2>/dev/null || true
+              fi
+              ;;
+              
+            "javascript")
+              echo "📊 JavaScript Code Analysis..."
+              # Install and run ESLint if package.json exists
+              if [ -f "package.json" ]; then
+                npm install
+                npx eslint . --ext .js || echo "⚠️ ESLint warnings found"
+              fi
+              
+              # Basic syntax validation
+              node -c starter.js
+              node -c tests.js
+              ;;
+              
+            "python")
+              echo "📊 Python Code Analysis..."
+              # Install flake8 for basic linting
+              pip install flake8 >/dev/null 2>&1 || true
+              
+              if command -v flake8 >/dev/null 2>&1; then
+                flake8 --max-line-length=120 --ignore=E501,W503 *.py || echo "⚠️ Flake8 warnings found"
+              fi
+              
+              # Check for common issues
+              python -m py_compile *.py
+              ;;
+              
+            *)
+              echo "📊 Basic file validation for $LANGUAGE..."
+              # Check for extremely long lines
+              if find . -name "*.$LANGUAGE" -o -name "*.${LANGUAGE:0:2}" | xargs wc -L | awk '$1 > 200 {print}' | head -1; then
+                echo "⚠️ Found very long lines (>200 chars)"
+              fi
+              ;;
+          esac
+          
+          # Universal checks
+          echo "📊 Universal checks..."
+          
+          # Check for hardcoded sensitive data
+          if grep -ri "password\|secret\|token\|key\s*=" . --exclude-dir=.git; then
+            echo "⚠️ Potential sensitive data found"
+          fi
+          
+          # Check file encoding (should be UTF-8)
+          if command -v file >/dev/null 2>&1; then
+            for f in $(find . -type f -name "*.*" ! -path "./.git/*"); do
+              if file "$f" | grep -q "UTF-8\|ASCII"; then
+                continue
+              else
+                echo "⚠️ Non-UTF-8 encoding detected: $f"
+              fi
+            done
+          fi
+          
+          echo "✅ Code quality checks completed"
+
+  # 🏷️ 6. Challenge Metadata Validation
+  validate-metadata:
+    name: 🏷️ Validate Metadata
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate Challenge Metadata
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          
+          echo "🏷️ Validating metadata for: $CHALLENGE_PATH"
+          
+          # Load challenge.json
+          CHALLENGE_JSON="$CHALLENGE_PATH/challenge.json"
+          
+          # Extract metadata
+          TITLE=$(jq -r '.title' "$CHALLENGE_JSON")
+          DESCRIPTION=$(jq -r '.description' "$CHALLENGE_JSON")
+          DIFFICULTY=$(jq -r '.difficulty' "$CHALLENGE_JSON")
+          LANGUAGE=$(jq -r '.language' "$CHALLENGE_JSON")
+          TAGS=$(jq -r '.tags[]' "$CHALLENGE_JSON" | tr '\n' ' ')
+          AUTHOR=$(jq -r '.author' "$CHALLENGE_JSON")
+          STATUS=$(jq -r '.status' "$CHALLENGE_JSON")
+          
+          echo "📋 Challenge Details:"
+          echo "  Title: $TITLE"
+          echo "  Language: $LANGUAGE"
+          echo "  Difficulty: $DIFFICULTY"
+          echo "  Tags: $TAGS"
+          echo "  Author: $AUTHOR"
+          echo "  Status: $STATUS"
+          
+          # Validation rules
+          echo "🔍 Running metadata validation..."
+          
+          # Check title uniqueness
+          EXISTING_CHALLENGES=$(find challenges -name "challenge.json" -not -path "$CHALLENGE_PATH/*" -exec jq -r '.title' {} \;)
+          if echo "$EXISTING_CHALLENGES" | grep -Fxq "$TITLE"; then
+            echo "❌ Challenge title already exists: $TITLE"
+            exit 1
+          fi
+          
+          # Check for appropriate tags based on language
+          case $LANGUAGE in
+            "csharp")
+              if [[ ! "$TAGS" =~ (algorithms|data-structures|oop|linq|async) ]]; then
+                echo "⚠️ Consider adding relevant C# tags (algorithms, data-structures, oop, linq, async)"
+              fi
+              ;;
+            "javascript")
+              if [[ ! "$TAGS" =~ (algorithms|arrays|objects|async|functional) ]]; then
+                echo "⚠️ Consider adding relevant JavaScript tags"
+              fi
+              ;;
+            "python")
+              if [[ ! "$TAGS" =~ (algorithms|data-structures|comprehensions|iterators) ]]; then
+                echo "⚠️ Consider adding relevant Python tags"
+              fi
+              ;;
+          esac
+          
+          # Check difficulty vs complexity heuristics
+          README_CONTENT=$(cat "$CHALLENGE_PATH/README.md")
+          if [[ "$DIFFICULTY" == "easy" ]] && echo "$README_CONTENT" | grep -qi "advanced\|complex\|optimization\|dynamic programming"; then
+            echo "⚠️ Difficulty marked as 'easy' but content suggests higher complexity"
+          fi
+          
+          # Check for PR context
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+            if [ "$AUTHOR" != "$PR_AUTHOR" ] && [ "$AUTHOR" != "system" ]; then
+              echo "⚠️ Challenge author ($AUTHOR) differs from PR author ($PR_AUTHOR)"
+            fi
+          fi
+          
+          echo "✅ Metadata validation completed"
+
+  # 📈 7. Performance & Security Tests
+  performance-security:
+    name: 📈 Performance & Security
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test-compilation]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Multi-Language Environment
+        uses: ./.github/actions/setup-languages
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Performance Tests
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "📈 Running performance tests for $LANGUAGE challenge: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          # Test execution time limits
+          echo "⏱️ Testing execution time limits..."
+          
+          case $LANGUAGE in
+            "csharp")
+              # Test with timeout
+              timeout 60s dotnet run > perf_output.txt 2>&1 || {
+                if [ $? -eq 124 ]; then
+                  echo "❌ Tests took longer than 60 seconds (timeout)"
+                  exit 1
+                fi
+              }
+              ;;
+            "cpp"|"c")
+              if [ -f "test_runner" ] || [ -f "Makefile" ]; then
+                [ -f "test_runner" ] || make > /dev/null 2>&1
+                timeout 60s ./test_runner > perf_output.txt 2>&1 || {
+                  if [ $? -eq 124 ]; then
+                    echo "❌ Tests took longer than 60 seconds (timeout)"
+                    exit 1
+                  fi
+                }
+              fi
+              ;;
+            "javascript")
+              timeout 60s node tests.js > perf_output.txt 2>&1 || {
+                if [ $? -eq 124 ]; then
+                  echo "❌ Tests took longer than 60 seconds (timeout)"
+                  exit 1
+                fi
+              }
+              ;;
+            "python")
+              timeout 60s python tests.py > perf_output.txt 2>&1 || {
+                if [ $? -eq 124 ]; then
+                  echo "❌ Tests took longer than 60 seconds (timeout)"
+                  exit 1
+                fi
+              }
+              ;;
+          esac
+          
+          # Check for infinite loops (basic heuristic)
+          if [ -f "perf_output.txt" ]; then
+            LINES=$(wc -l < perf_output.txt)
+            if [ "$LINES" -gt 10000 ]; then
+              echo "⚠️ Excessive output detected ($LINES lines) - possible infinite loop"
+            fi
+          fi
+          
+          echo "✅ Performance tests passed"
+
+      - name: Security Scan
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "🔒 Running security scans for $LANGUAGE challenge: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          # Check for dangerous patterns
+          echo "🔍 Scanning for dangerous patterns..."
+          
+          # Common dangerous patterns across languages
+          DANGEROUS_PATTERNS=(
+            "eval\|exec\|system"
+            "subprocess\|shell"
+            "Runtime\.getRuntime"
+            "Process\.Start"
+            "os\.system\|os\.popen"
+            "shell_exec\|passthru"
+          )
+          
+          for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+            if grep -ri "$pattern" . --exclude-dir=.git --exclude="*.md"; then
+              echo "⚠️ Potentially dangerous pattern found: $pattern"
+            fi
+          done
+          
+          # Language-specific security checks
+          case $LANGUAGE in
+            "csharp")
+              # Check for unsafe code blocks
+              if grep -r "unsafe\s*{" . --include="*.cs"; then
+                echo "⚠️ Unsafe code blocks found"
+              fi
+              
+              # Check for reflection usage
+              if grep -r "Reflection\|GetType\|Activator\.CreateInstance" . --include="*.cs"; then
+                echo "⚠️ Reflection usage found"
+              fi
+              ;;
+              
+            "javascript")
+              # Check for eval usage
+              if grep -r "\beval\s*(" . --include="*.js"; then
+                echo "⚠️ eval() usage found"
+              fi
+              
+              # Check for document/window access (if this should be server-side)
+              if grep -r "\bdocument\.\|window\." . --include="*.js"; then
+                echo "⚠️ Browser-specific code found in server challenge"
+              fi
+              ;;
+              
+            "python")
+              # Check for exec/eval
+              if grep -r "\bexec\s*(\|\beval\s*(" . --include="*.py"; then
+                echo "⚠️ exec()/eval() usage found"
+              fi
+              
+              # Check for file system access
+              if grep -r "open\s*(\|file\s*(" . --include="*.py"; then
+                echo "⚠️ File system access found"
+              fi
+              ;;
+              
+            "cpp"|"c")
+              # Check for dangerous C functions
+              if grep -r "gets\|strcpy\|strcat\|sprintf" . --include="*.c" --include="*.cpp" --include="*.h"; then
+                echo "⚠️ Potentially unsafe C functions found"
+              fi
+              
+              # Check for system calls
+              if grep -r "#include\s*<stdlib\.h>\|system\s*(" . --include="*.c" --include="*.cpp"; then
+                echo "⚠️ System calls found"
+              fi
+              ;;
+          esac
+          
+          # Check file permissions
+          echo "🔍 Checking file permissions..."
+          find . -type f -executable ! -name "test_runner" ! -name "*.sh" ! -path "./.git/*" | while read -r file; do
+            echo "⚠️ Unexpected executable file: $file"
+          done
+          
+          echo "✅ Security scan completed"
+
+  # 🎯 8. Integration Tests
+  integration-tests:
+    name: 🎯 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test-framework, code-quality]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Multi-Language Environment
+        uses: ./.github/actions/setup-languages
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Integration Test - Full Challenge Workflow
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          LANGUAGE="${{ matrix.language }}"
+          
+          echo "🎯 Running integration tests for $LANGUAGE challenge: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          # Simulate the full challenge workflow
+          echo "📋 Step 1: Initial build/setup..."
+          
+          case $LANGUAGE in
+            "csharp")
+              # Clean build
+              dotnet clean > /dev/null 2>&1 || true
+              dotnet build --configuration Release
+              echo "✅ C# project builds successfully"
+              ;;
+              
+            "cpp")
+              # Clean and build
+              make clean > /dev/null 2>&1 || true
+              make
+              echo "✅ C++ project builds successfully"
+              ;;
+              
+            "c")
+              make clean > /dev/null 2>&1 || true
+              make
+              echo "✅ C project builds successfully"
+              ;;
+              
+            "javascript")
+              # Check if package.json exists and install dependencies
+              if [ -f "package.json" ]; then
+                npm install
+              fi
+              echo "✅ JavaScript dependencies ready"
+              ;;
+              
+            "python")
+              # Check if requirements.txt exists and install
+              if [ -f "requirements.txt" ]; then
+                pip install -r requirements.txt
+              fi
+              echo "✅ Python dependencies ready"
+              ;;
+          esac
+          
+          echo "📋 Step 2: Test incomplete implementation fails..."
+          
+          # Run tests with starter code (should fail)
+          FAIL_EXPECTED=true
+          case $LANGUAGE in
+            "csharp")
+              if dotnet run 2>&1 | grep -q "🎉.*Tests bestanden"; then
+                echo "❌ Tests should fail with starter code"
+                exit 1
+              fi
+              ;;
+            "cpp"|"c")
+              if ./test_runner 2>&1 | grep -q "🎉.*Tests bestanden"; then
+                echo "❌ Tests should fail with starter code"
+                exit 1
+              fi
+              ;;
+            "javascript")
+              if node tests.js 2>&1 | grep -q "Tests bestanden"; then
+                echo "❌ Tests should fail with starter code"
+                exit 1
+              fi
+              ;;
+            "python")
+              if python tests.py 2>&1 | grep -q "Tests bestanden"; then
+                echo "❌ Tests should fail with starter code"
+                exit 1
+              fi
+              ;;
+          esac
+          
+          echo "✅ Tests correctly fail with incomplete implementation"
+          
+          echo "📋 Step 3: Validate README instructions..."
+          
+          # Check that README contains proper run instructions
+          README_CONTENT=$(cat README.md)
+          case $LANGUAGE in
+            "csharp")
+              if [[ ! "$README_CONTENT" =~ "dotnet run" ]]; then
+                echo "⚠️ README should contain 'dotnet run' instruction"
+              fi
+              ;;
+            "cpp"|"c")
+              if [[ ! "$README_CONTENT" =~ "make test\|./test_runner" ]]; then
+                echo "⚠️ README should contain build/run instructions"
+              fi
+              ;;
+            "javascript")
+              if [[ ! "$README_CONTENT" =~ "node.*test" ]]; then
+                echo "⚠️ README should contain 'node tests.js' instruction"
+              fi
+              ;;
+            "python")
+              if [[ ! "$README_CONTENT" =~ "python.*test" ]]; then
+                echo "⚠️ README should contain 'python tests.py' instruction"
+              fi
+              ;;
+          esac
+          
+          echo "✅ Integration tests completed successfully"
+
+  # 📋 9. Documentation & Examples Validation
+  validate-documentation:
+    name: 📋 Documentation Check
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Documentation Quality
+        run: |
+          set -e
+          CHALLENGE_PATH="${{ matrix.path }}"
+          
+          echo "📋 Validating documentation for: $CHALLENGE_PATH"
+          cd "$CHALLENGE_PATH"
+          
+          # Check README.md completeness
+          README_CONTENT=$(cat README.md)
+          
+          # Required sections check
+          REQUIRED_SECTIONS=(
+            "# "
+            "## 📝 Beschreibung"
+            "## 🎯 Schwierigkeit"
+            "## 💻 Sprache"
+            "## 🏷️ Tags"
+            "## 🚀 Anweisungen"
+          )
+          
+          echo "🔍 Checking required README sections..."
+          for section in "${REQUIRED_SECTIONS[@]}"; do
+            if [[ ! "$README_CONTENT" =~ $section ]]; then
+              echo "❌ Missing required section: $section"
+              exit 1
+            fi
+          done
+          
+          # Check for examples
+          if [[ "$README_CONTENT" =~ "## 📖 Beispiel" ]] || [[ "$README_CONTENT" =~ "## 📖 Beispiele" ]]; then
+            echo "✅ Examples section found"
+          else
+            echo "⚠️ Consider adding examples section"
+          fi
+          
+          # Check description quality
+          DESCRIPTION=$(jq -r '.description' challenge.json)
+          WORD_COUNT=$(echo "$DESCRIPTION" | wc -w)
+          if [ "$WORD_COUNT" -lt 10 ]; then
+            echo "⚠️ Description is quite short ($WORD_COUNT words)"
+          fi
+          
+          # Check for code blocks in README
+          if grep -q "```" README.md; then
+            echo "✅ Code examples found in README"
+            
+            # Validate code block languages
+            grep -o '```[a-zA-Z]*' README.md | while read -r code_block; do
+              LANG=${code_block#\`\`\`}
+              if [ -n "$LANG" ] && [[ ! "$LANG" =~ ^(bash|shell|json|markdown|text|${{ matrix.language }})$ ]]; then
+                echo "⚠️ Unexpected code block language: $LANG"
+              fi
+            done
+          fi
+          
+          # Check for proper emoji usage (consistency)
+          EMOJI_COUNT=$(grep -o "📝\|🎯\|💻\|🏷️\|🚀\|📖\|📊" README.md | wc -l)
+          if [ "$EMOJI_COUNT" -lt 5 ]; then
+            echo "⚠️ Consider using more consistent emoji formatting"
+          fi
+          
+          echo "✅ Documentation validation completed"
+
+  # 📊 10. Generate Validation Report
+  generate-report:
+    name: 📊 Generate Validation Report
+    runs-on: ubuntu-latest
+    needs: [
+      detect-changes,
+      validate-structure,
+      test-compilation,
+      test-framework,
+      code-quality,
+      validate-metadata,
+      performance-security,
+      integration-tests,
+      validate-documentation
+    ]
+    if: always() && needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Validation Report
+        run: |
+          set -e
+          
+          echo "📊 Generating comprehensive validation report..."
+          
+          # Create report directory
+          mkdir -p validation-reports
+          REPORT_FILE="validation-reports/challenge-validation-$(date +%Y%m%d-%H%M%S).md"
+          
+          # Start report
+          cat > "$REPORT_FILE" << 'EOF'
+          # 🎯 Challenge Validation Report
+          
+          **Generated:** $(date)
+          **Workflow:** ${{ github.workflow }}
+          **Run ID:** ${{ github.run_id }}
+          **Event:** ${{ github.event_name }}
+          
+          ## 📋 Summary
+          
+          | Challenge | Language | Difficulty | Status |
+          |-----------|----------|------------|--------|
+          EOF
+          
+          # Add challenge summary
+          CHALLENGES='${{ needs.detect-changes.outputs.challenges }}'
+          echo "$CHALLENGES" | jq -r '.[]' | while read -r challenge_path; do
+            if [ -f "$challenge_path/challenge.json" ]; then
+              TITLE=$(jq -r '.title' "$challenge_path/challenge.json")
+              LANGUAGE=$(jq -r '.language' "$challenge_path/challenge.json")
+              DIFFICULTY=$(jq -r '.difficulty' "$challenge_path/challenge.json")
+              
+              # Determine overall status based on job results
+              OVERALL_STATUS="✅ PASSED"
+              if [ "${{ needs.validate-structure.result }}" != "success" ] || \
+                 [ "${{ needs.test-compilation.result }}" != "success" ] || \
+                 [ "${{ needs.test-framework.result }}" != "success" ]; then
+                OVERALL_STATUS="❌ FAILED"
+              elif [ "${{ needs.code-quality.result }}" != "success" ] || \
+                   [ "${{ needs.performance-security.result }}" != "success" ]; then
+                OVERALL_STATUS="⚠️ WARNINGS"
+              fi
+              
+              echo "| $TITLE | $LANGUAGE | $DIFFICULTY | $OVERALL_STATUS |" >> "$REPORT_FILE"
+            fi
+          done
+          
+          # Add detailed results
+          cat >> "$REPORT_FILE" << 'EOF'
+          
+          ## 🔍 Detailed Results
+          
+          ### Structure Validation
+          **Status:** ${{ needs.validate-structure.result }}
+          
+          ### Compilation Tests  
+          **Status:** ${{ needs.test-compilation.result }}
+          
+          ### Test Framework Validation
+          **Status:** ${{ needs.test-framework.result }}
+          
+          ### Code Quality Analysis
+          **Status:** ${{ needs.code-quality.result }}
+          
+          ### Metadata Validation
+          **Status:** ${{ needs.validate-metadata.result }}
+          
+          ### Performance & Security
+          **Status:** ${{ needs.performance-security.result }}
+          
+          ### Integration Tests
+          **Status:** ${{ needs.integration-tests.result }}
+          
+          ### Documentation Check
+          **Status:** ${{ needs.validate-documentation.result }}
+          
+          ## 📈 Recommendations
+          
+          EOF
+          
+          # Add recommendations based on results
+          if [ "${{ needs.code-quality.result }}" != "success" ]; then
+            echo "- 📊 **Code Quality:** Review code quality warnings and consider improvements" >> "$REPORT_FILE"
+          fi
+          
+          if [ "${{ needs.performance-security.result }}" != "success" ]; then
+            echo "- 🔒 **Security:** Address security scan findings" >> "$REPORT_FILE"
+          fi
+          
+          if [ "${{ needs.validate-documentation.result }}" != "success" ]; then
+            echo "- 📋 **Documentation:** Improve documentation completeness" >> "$REPORT_FILE"
+          fi
+          
+          # Add footer
+          cat >> "$REPORT_FILE" << 'EOF'
+          
+          ---
+          
+          **Generated by GitHub Actions** | [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+          
+          echo "📊 Validation report generated: $REPORT_FILE"
+          
+          # Display report summary
+          echo "## 📋 Validation Summary"
+          tail -n 20 "$REPORT_FILE"
+
+      - name: Upload Validation Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report-${{ github.run_id }}
+          path: validation-reports/
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Find the latest report file
+            const reportDir = 'validation-reports';
+            const files = fs.readdirSync(reportDir);
+            const latestReport = files.sort().pop();
+            
+            if (latestReport) {
+              const reportContent = fs.readFileSync(path.join(reportDir, latestReport), 'utf8');
+              
+              // Create PR comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🎯 Challenge Validation Results
+                
+${reportContent}
+
+[📊 View Full Report](${context.payload.repository.html_url}/actions/runs/${context.runId})`
+              });
+            }
+
+  # ✅ 11. Final Status Check
+  validation-status:
+    name: ✅ Validation Status
+    runs-on: ubuntu-latest
+    needs: [
+      detect-changes,
+      validate-structure,
+      test-compilation,
+      test-framework,
+      code-quality,
+      validate-metadata,
+      performance-security,
+      integration-tests,
+      validate-documentation,
+      generate-report
+    ]
+    if: always()
+    steps:
+      - name: Determine Final Status
+        run: |
+          set -e
+          
+          echo "✅ Determining final validation status..."
+          
+          # Check if any changes were detected
+          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
+            echo "ℹ️ No challenge changes detected - validation skipped"
+            exit 0
+          fi
+          
+          # Critical failures (should block merge)
+          CRITICAL_FAILURES=()
+          
+          if [ "${{ needs.validate-structure.result }}" != "success" ]; then
+            CRITICAL_FAILURES+=("Structure Validation")
+          fi
+          
+          if [ "${{ needs.test-compilation.result }}" != "success" ]; then
+            CRITICAL_FAILURES+=("Compilation Tests")
+          fi
+          
+          if [ "${{ needs.test-framework.result }}" != "success" ]; then
+            CRITICAL_FAILURES+=("Test Framework")
+          fi
+          
+          if [ "${{ needs.validate-metadata.result }}" != "success" ]; then
+            CRITICAL_FAILURES+=("Metadata Validation")
+          fi
+          
+          if [ "${{ needs.integration-tests.result }}" != "success" ]; then
+            CRITICAL_FAILURES+=("Integration Tests")
+          fi
+          
+          # Non-critical warnings
+          WARNINGS=()
+          
+          if [ "${{ needs.code-quality.result }}" != "success" ]; then
+            WARNINGS+=("Code Quality")
+          fi
+          
+          if [ "${{ needs.performance-security.result }}" != "success" ]; then
+            WARNINGS+=("Performance/Security")
+          fi
+          
+          if [ "${{ needs.validate-documentation.result }}" != "success" ]; then
+            WARNINGS+=("Documentation")
+          fi
+          
+          # Report results
+          if [ ${#CRITICAL_FAILURES[@]} -gt 0 ]; then
+            echo "❌ CRITICAL FAILURES DETECTED:"
+            printf '  - %s\n' "${CRITICAL_FAILURES[@]}"
+            echo ""
+            echo "🚫 Merge should be BLOCKED until these issues are resolved."
+            exit 1
+          elif [ ${#WARNINGS[@]} -gt 0 ]; then
+            echo "⚠️ WARNINGS DETECTED:"
+            printf '  - %s\n' "${WARNINGS[@]}"
+            echo ""
+            echo "✅ Merge allowed, but consider addressing warnings."
+            exit 0
+          else
+            echo "🎉 ALL VALIDATIONS PASSED!"
+            echo "✅ Challenge(s) ready for merge."
+            exit 0
+          fi
+
+---
+
+## 🔧 Custom GitHub Actions
+
+### `.github/actions/setup-languages/action.yml`
+
+```yaml
+name: 'Setup Multi-Language Environment'
+description: 'Sets up development environments for multiple programming languages'
+inputs:
+  languages:
+    description: 'Comma-separated list of languages to set up'
+    required: true
+    default: 'csharp,javascript,python,cpp,c,java,go,rust'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET
+      if: contains(inputs.languages, 'csharp')
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Setup Node.js
+      if: contains(inputs.languages, 'javascript')
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Setup Python
+      if: contains(inputs.languages, 'python')
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Setup Java
+      if: contains(inputs.languages, 'java')
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Go
+      if: contains(inputs.languages, 'go')
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Setup Rust
+      if: contains(inputs.languages, 'rust')
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install C/C++ Tools
+      if: contains(inputs.languages, 'cpp') || contains(inputs.languages, 'c')
+      shell: bash
       run: |
-        echo "✅ Challenge validation completed successfully!"
-        echo "Ready for admin review! 🚀"
+        sudo apt-get update
+        sudo apt-get install -y build-essential gcc g++ make valgrind cppcheck
+
+    - name: Install Additional Tools
+      shell: bash
+      run: |
+        # Install universal tools
+        sudo apt-get install -y jq curl wget
+        
+        # Install language-specific linters
+        if [[ "${{ inputs.languages }}" == *"python"* ]]; then
+          pip install flake8 black pylint
+        fi
+        
+        if [[ "${{ inputs.languages }}" == *"javascript"* ]]; then
+          npm install -g eslint prettier
+        fi
