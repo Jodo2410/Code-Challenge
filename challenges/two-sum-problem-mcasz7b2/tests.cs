@@ -1,6 +1,6 @@
 using System;
 
-public class TwoSumTests
+public class Tests
 {
     private static int testsPassed = 0;
     private static int totalTests = 0;
