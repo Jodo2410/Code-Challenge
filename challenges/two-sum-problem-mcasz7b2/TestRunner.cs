@@ -10,7 +10,7 @@ public class TestRunner
         try
         {
             // ✅ KORRIGIERT: Verwendet standardisierten Klassennamen
-            TwoSumTests.RunAllTests();
+            Tests.RunAllTests();
         }
         catch (Exception ex)
         {
