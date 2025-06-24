@@ -1,0 +1,14 @@
+{
+  "id": "array-sum-calculator-mcao7m7q",
+  "title": "Array Sum Calculator",
+  "description": "Implementiere verschiedene Funktionen zur Berechnung von Array-Summen...",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": [
+    "arrays",
+    "sum"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-24T15:18:46.294Z",
+  "status": "pending"
+}
