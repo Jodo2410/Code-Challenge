@@ -1,0 +1,12 @@
+{
+  "id": "hal-mcazfk9x",
+  "title": "hAL",
+  "errorMessage": "C# Kompilierungsfehler",
+  "errorType": "compilation",
+  "timestamp": "2025-06-24T20:34:54.890Z",
+  "isResolved": false,
+  "stackTrace": "",
+  "reportedBy": "Jodo2410",
+  "issueNumber": 16,
+  "issueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/16"
+}
