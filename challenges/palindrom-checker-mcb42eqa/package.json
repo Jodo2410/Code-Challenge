@@ -1,0 +1,19 @@
+{
+  "name": "palindromchecker",
+  "version": "1.0.0",
+  "description": "Schreibe eine Funktion, die überprüft, ob ein gegebener String ein Palindrom ist. Ein Palindrom ist ein Wort, das vorwärts und rückwärts gelesen identisch ist. Ignoriere dabei Groß-/Kleinschreibung und Leerzeichen.\n\nBeispiele:\n- isPalindrome(\"racecar\") → true\n- isPalindrome(\"A man a plan a canal Panama\") → true\n- isPalindrome(\"race a car\") → false\n- isPalindrome(\"hello\") → false",
+  "main": "starter.js",
+  "scripts": {
+    "test": "node tests.js",
+    "start": "node starter.js"
+  },
+  "dependencies": {},
+  "keywords": [
+    "string-manipulation",
+    "two-pointers",
+    "palindrome",
+    "beginner",
+    "text-processing"
+  ],
+  "author": "Jodo2410"
+}
