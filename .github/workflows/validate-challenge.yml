@@ -1,0 +1,58 @@
+name: Validate Challenge
+
+on:
+  pull_request:
+    paths:
+      - 'challenges/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Challenge Structure
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate Challenge Structure
+      run: |
+        echo "🔍 Validating challenge structure..."
+        
+        # Check if new challenges have required files
+        for dir in challenges/*/; do
+          if [ -d "$dir" ] && [ "$dir" != "challenges/.gitkeep" ]; then
+            echo "Checking $dir"
+            
+            # Check for required files
+            if [ ! -f "$dir/challenge.json" ]; then
+              echo "❌ Missing challenge.json in $dir"
+              exit 1
+            fi
+            
+            if [ ! -f "$dir/README.md" ]; then
+              echo "❌ Missing README.md in $dir"
+              exit 1
+            fi
+            
+            # Validate JSON syntax
+            if ! cat "$dir/challenge.json" | jq empty; then
+              echo "❌ Invalid JSON in $dir/challenge.json"
+              exit 1
+            fi
+            
+            # Check required JSON fields
+            if ! cat "$dir/challenge.json" | jq -e '.id and .title and .description and .difficulty and .language' > /dev/null; then
+              echo "❌ Missing required fields in $dir/challenge.json"
+              exit 1
+            fi
+            
+            echo "✅ $dir structure is valid"
+          fi
+        done
+        
+        echo "🎉 All challenges passed validation!"
+        
+    - name: Success Message
+      run: |
+        echo "✅ Challenge validation completed successfully!"
+        echo "Ready for admin review! 🚀"
