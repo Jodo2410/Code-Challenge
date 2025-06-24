@@ -1,0 +1,19 @@
+{
+  "id": "helloworldhelloworld-mcb2hqi6",
+  "title": "HelloworldHelloworld",
+  "description": "HelloworldHelloworldHelloworldHelloworld",
+  "difficulty": "medium",
+  "language": "java",
+  "tags": [
+    "Helloworld"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-24T21:58:33.037Z",
+  "status": "approved",
+  "starterCode": "Helloworld",
+  "solution": "HelloworldHelloworldHelloworldHelloworldHelloworld",
+  "tests": "HelloworldHelloworldHelloworldHelloworldHelloworldHelloworld",
+  "testClassName": "Tests",
+  "mainClassName": "Helloworldhelloworld",
+  "functionName": "helloworldhelloworld"
+}
