@@ -1,11 +1,12 @@
 {
   "id": "two-sum-problem-mcasz7b2",
   "title": "Two Sum Problem",
-  "errorMessage": "Keine ah",
-  "errorType": "template",
-  "timestamp": "2025-06-24T18:12:56.052Z",
+  "errorMessage": "C# Kompilierungsfehler",
+  "errorType": "compilation",
+  "timestamp": "2025-06-24T18:48:19.620Z",
   "isResolved": false,
+  "stackTrace": "",
   "reportedBy": "Jodo2410",
-  "issueNumber": 9,
-  "issueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/9"
+  "issueNumber": 12,
+  "issueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/12"
 }
