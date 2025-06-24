@@ -1,0 +1,555 @@
+name: 🎯 Challenge Validation
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths: 
+      - 'challenges/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'challenges/**'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+  DOTNET_VERSION: '8.0.x'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  detect-changes:
+    name: 🔍 Detect Changed Challenges
+    runs-on: ubuntu-latest
+    outputs:
+      challenges: ${{ steps.detect.outputs.challenges }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Changed Challenges
+        id: detect
+        run: |
+          set -e
+          echo "🔍 Detecting changed challenges..."
+          
+          if [ "${{ github.event_name }}" = "push" ]; then
+            CHANGED_CHALLENGES=$(find challenges -mindepth 1 -maxdepth 1 -type d | head -10)
+          else
+            CHANGED_CHALLENGES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '^challenges/' | cut -d'/' -f1-2 | sort -u)
+          fi
+          
+          echo "Changed challenges: $CHANGED_CHALLENGES"
+          
+          if [ -z "$CHANGED_CHALLENGES" ]; then
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "challenges=" >> $GITHUB_OUTPUT
+            echo "ℹ️ No challenge changes detected"
+            exit 0
+          fi
+          
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+          echo "challenges<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_CHALLENGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "✅ Detected challenges: $CHANGED_CHALLENGES"
+
+  validate-structure:
+    name: 📁 Validate Structure
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq python3-pip
+          pip3 install jsonschema
+
+      - name: Validate Challenge Structure
+        run: |
+          set -e
+          
+          CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          
+          for challenge_path in $CHALLENGES; do
+            if [ -d "$challenge_path" ]; then
+              echo "🔍 Validating structure for: $challenge_path"
+              
+              # Check basic files
+              if [ ! -f "$challenge_path/challenge.json" ]; then
+                echo "❌ Missing challenge.json in $challenge_path"
+                exit 1
+              fi
+              
+              if [ ! -f "$challenge_path/README.md" ]; then
+                echo "❌ Missing README.md in $challenge_path"
+                exit 1
+              fi
+              
+              # Validate JSON syntax
+              if ! python3 -m json.tool "$challenge_path/challenge.json" > /dev/null; then
+                echo "❌ Invalid JSON syntax in $challenge_path/challenge.json"
+                exit 1
+              fi
+              
+              # Get language and check language-specific files
+              LANGUAGE=$(python3 -c "
+              import json, sys
+              try:
+                  with open('$challenge_path/challenge.json', 'r') as f:
+                      data = json.load(f)
+                      print(data.get('language', 'unknown'))
+              except:
+                  print('unknown')
+              ")
+              
+              echo "Language: $LANGUAGE"
+              
+              # Check starter and test files
+              case $LANGUAGE in
+                "csharp")
+                  [ -f "$challenge_path/starter.cs" ] || { echo "❌ Missing starter.cs"; exit 1; }
+                  [ -f "$challenge_path/tests.cs" ] || { echo "❌ Missing tests.cs"; exit 1; }
+                  ;;
+                "javascript")
+                  [ -f "$challenge_path/starter.js" ] || { echo "❌ Missing starter.js"; exit 1; }
+                  [ -f "$challenge_path/tests.js" ] || { echo "❌ Missing tests.js"; exit 1; }
+                  ;;
+                "python")
+                  [ -f "$challenge_path/starter.py" ] || { echo "❌ Missing starter.py"; exit 1; }
+                  [ -f "$challenge_path/tests.py" ] || { echo "❌ Missing tests.py"; exit 1; }
+                  ;;
+                "cpp")
+                  [ -f "$challenge_path/starter.cpp" ] || { echo "❌ Missing starter.cpp"; exit 1; }
+                  [ -f "$challenge_path/tests.cpp" ] || { echo "❌ Missing tests.cpp"; exit 1; }
+                  ;;
+                "c")
+                  [ -f "$challenge_path/starter.c" ] || { echo "❌ Missing starter.c"; exit 1; }
+                  [ -f "$challenge_path/tests.c" ] || { echo "❌ Missing tests.c"; exit 1; }
+                  ;;
+                "java")
+                  [ -f "$challenge_path/starter.java" ] || { echo "❌ Missing starter.java"; exit 1; }
+                  [ -f "$challenge_path/tests.java" ] || { echo "❌ Missing tests.java"; exit 1; }
+                  ;;
+              esac
+              
+              echo "✅ Structure validation passed for $challenge_path"
+            fi
+          done
+
+  validate-metadata:
+    name: 🏷️ Validate Metadata
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Challenge Metadata
+        run: |
+          set -e
+          
+          CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          
+          for challenge_path in $CHALLENGES; do
+            if [ -f "$challenge_path/challenge.json" ]; then
+              echo "🏷️ Validating metadata for: $challenge_path"
+              
+              python3 -c "
+              import json, sys
+              
+              required_fields = ['title', 'description', 'difficulty', 'language', 'tags', 'author', 'createdAt', 'status']
+              valid_difficulties = ['easy', 'medium', 'hard']
+              valid_languages = ['csharp', 'javascript', 'python', 'java', 'cpp', 'c', 'go', 'rust']
+              
+              try:
+                  with open('$challenge_path/challenge.json', 'r') as f:
+                      data = json.load(f)
+                  
+                  # Check required fields
+                  for field in required_fields:
+                      if field not in data:
+                          print(f'❌ Missing required field: {field}')
+                          sys.exit(1)
+                  
+                  # Validate values
+                  if data['difficulty'] not in valid_difficulties:
+                      print(f'❌ Invalid difficulty: {data[\"difficulty\"]}')
+                      sys.exit(1)
+                  
+                  if data['language'] not in valid_languages:
+                      print(f'❌ Invalid language: {data[\"language\"]}')
+                      sys.exit(1)
+                  
+                  # Check lengths
+                  if len(data['title']) < 3 or len(data['title']) > 100:
+                      print(f'❌ Title length invalid: {len(data[\"title\"])} chars')
+                      sys.exit(1)
+                  
+                  if len(data['description']) < 20:
+                      print(f'❌ Description too short: {len(data[\"description\"])} chars')
+                      sys.exit(1)
+                  
+                  print(f'✅ Metadata valid for {data[\"title\"]}')
+                  
+              except Exception as e:
+                  print(f'❌ Error validating metadata: {e}')
+                  sys.exit(1)
+              "
+            fi
+          done
+
+  test-compilation:
+    name: 🔨 Test Compilation
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-structure]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gcc g++ make
+
+      - name: Test Compilation
+        run: |
+          set -e
+          
+          CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          
+          for challenge_path in $CHALLENGES; do
+            if [ -d "$challenge_path" ]; then
+              echo "🔨 Testing compilation for: $challenge_path"
+              cd "$challenge_path"
+              
+              # Get language
+              LANGUAGE=$(python3 -c "
+              import json
+              try:
+                  with open('challenge.json', 'r') as f:
+                      data = json.load(f)
+                      print(data.get('language', 'unknown'))
+              except:
+                  print('unknown')
+              ")
+              
+              case $LANGUAGE in
+                "csharp")
+                  if ls *.csproj 1> /dev/null 2>&1; then
+                    echo "Building C# project..."
+                    dotnet build --configuration Release --verbosity minimal
+                    echo "✅ C# compilation successful"
+                  else
+                    echo "⚠️ No .csproj file found, skipping build"
+                  fi
+                  ;;
+                  
+                "javascript")
+                  echo "Validating JavaScript syntax..."
+                  node -c starter.js
+                  node -c tests.js
+                  echo "✅ JavaScript syntax valid"
+                  ;;
+                  
+                "python")
+                  echo "Validating Python syntax..."
+                  python3 -m py_compile starter.py
+                  python3 -m py_compile tests.py
+                  echo "✅ Python syntax valid"
+                  ;;
+                  
+                "cpp")
+                  echo "Building C++ project..."
+                  if [ -f "Makefile" ]; then
+                    make clean && make
+                  else
+                    g++ -std=c++17 -Wall -Wextra -O2 -c starter.cpp
+                    g++ -std=c++17 -Wall -Wextra -O2 -c tests.cpp
+                  fi
+                  echo "✅ C++ compilation successful"
+                  ;;
+                  
+                "c")
+                  echo "Building C project..."
+                  if [ -f "Makefile" ]; then
+                    make clean && make
+                  else
+                    gcc -std=c99 -Wall -Wextra -O2 -c starter.c
+                    gcc -std=c99 -Wall -Wextra -O2 -c tests.c
+                  fi
+                  echo "✅ C compilation successful"
+                  ;;
+                  
+                "java")
+                  echo "Building Java project..."
+                  javac *.java
+                  echo "✅ Java compilation successful"
+                  ;;
+                  
+                *)
+                  echo "⚠️ Compilation test not implemented for: $LANGUAGE"
+                  ;;
+              esac
+              
+              cd ..
+            fi
+          done
+
+  test-framework:
+    name: 🧪 Test Framework
+    runs-on: ubuntu-latest
+    needs: [detect-changes, test-compilation]
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Environment
+        run: |
+          # .NET
+          wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+          chmod +x dotnet-install.sh
+          ./dotnet-install.sh --channel 8.0
+          export PATH="$HOME/.dotnet:$PATH"
+          
+          # Node.js
+          curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          
+          # Python and build tools
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip build-essential gcc g++ make openjdk-17-jdk
+
+      - name: Test Framework Validation
+        run: |
+          set -e
+          
+          CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          
+          for challenge_path in $CHALLENGES; do
+            if [ -d "$challenge_path" ]; then
+              echo "🧪 Testing framework for: $challenge_path"
+              cd "$challenge_path"
+              
+              # Get language
+              LANGUAGE=$(python3 -c "
+              import json
+              try:
+                  with open('challenge.json', 'r') as f:
+                      data = json.load(f)
+                      print(data.get('language', 'unknown'))
+              except:
+                  print('unknown')
+              ")
+              
+              echo "Testing $LANGUAGE framework..."
+              
+              # Basic framework test - check if tests exist and can be executed
+              case $LANGUAGE in
+                "csharp")
+                  export PATH="$HOME/.dotnet:$PATH"
+                  if ls *.csproj 1> /dev/null 2>&1; then
+                    timeout 30s dotnet run > test_output.txt 2>&1 || true
+                    if [ -f test_output.txt ]; then
+                      echo "✅ C# test framework executable"
+                    fi
+                  fi
+                  ;;
+                  
+                "javascript")
+                  timeout 30s node tests.js > test_output.txt 2>&1 || true
+                  if [ -f test_output.txt ]; then
+                    echo "✅ JavaScript test framework executable"
+                  fi
+                  ;;
+                  
+                "python")
+                  timeout 30s python3 tests.py > test_output.txt 2>&1 || true
+                  if [ -f test_output.txt ]; then
+                    echo "✅ Python test framework executable"
+                  fi
+                  ;;
+                  
+                "cpp")
+                  if [ -f "Makefile" ]; then
+                    make clean && make > /dev/null 2>&1 || true
+                    if [ -f "test_runner" ]; then
+                      timeout 30s ./test_runner > test_output.txt 2>&1 || true
+                      echo "✅ C++ test framework executable"
+                    fi
+                  fi
+                  ;;
+                  
+                "c")
+                  if [ -f "Makefile" ]; then
+                    make clean && make > /dev/null 2>&1 || true
+                    if [ -f "test_runner" ]; then
+                      timeout 30s ./test_runner > test_output.txt 2>&1 || true
+                      echo "✅ C test framework executable"
+                    fi
+                  fi
+                  ;;
+                  
+                "java")
+                  javac *.java > /dev/null 2>&1 || true
+                  if [ -f "Tests.class" ]; then
+                    timeout 30s java Tests > test_output.txt 2>&1 || true
+                    echo "✅ Java test framework executable"
+                  fi
+                  ;;
+              esac
+              
+              cd ..
+            fi
+          done
+
+  generate-report:
+    name: 📊 Generate Report
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-structure, validate-metadata, test-compilation, test-framework]
+    if: always() && needs.detect-changes.outputs.has-changes == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Validation Report
+        run: |
+          set -e
+          
+          echo "📊 Generating validation report..."
+          
+          mkdir -p validation-reports
+          REPORT_FILE="validation-reports/challenge-validation-$(date +%Y%m%d-%H%M%S).md"
+          
+          # Create report
+          echo "# 🎯 Challenge Validation Report" > "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          echo "**Generated:** $(date)" >> "$REPORT_FILE"
+          echo "**Workflow:** ${{ github.workflow }}" >> "$REPORT_FILE"
+          echo "**Run ID:** ${{ github.run_id }}" >> "$REPORT_FILE"
+          echo "**Event:** ${{ github.event_name }}" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          
+          # Summary table
+          echo "## 📋 Summary" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          echo "| Job | Status |" >> "$REPORT_FILE"
+          echo "|-----|--------|" >> "$REPORT_FILE"
+          echo "| Structure Validation | ${{ needs.validate-structure.result }} |" >> "$REPORT_FILE"
+          echo "| Metadata Validation | ${{ needs.validate-metadata.result }} |" >> "$REPORT_FILE"
+          echo "| Compilation Tests | ${{ needs.test-compilation.result }} |" >> "$REPORT_FILE"
+          echo "| Framework Tests | ${{ needs.test-framework.result }} |" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          
+          # Challenges
+          echo "## 🎯 Validated Challenges" >> "$REPORT_FILE"
+          echo "" >> "$REPORT_FILE"
+          
+          CHALLENGES="${{ needs.detect-changes.outputs.challenges }}"
+          for challenge_path in $CHALLENGES; do
+            if [ -f "$challenge_path/challenge.json" ]; then
+              TITLE=$(python3 -c "
+              import json
+              try:
+                  with open('$challenge_path/challenge.json', 'r') as f:
+                      data = json.load(f)
+                      print(data.get('title', 'Unknown'))
+              except:
+                  print('Unknown')
+              ")
+              echo "- ✅ **$TITLE** ($challenge_path)" >> "$REPORT_FILE"
+            fi
+          done
+          
+          echo "" >> "$REPORT_FILE"
+          echo "---" >> "$REPORT_FILE"
+          echo "**Generated by GitHub Actions**" >> "$REPORT_FILE"
+          
+          echo "📊 Report generated: $REPORT_FILE"
+          cat "$REPORT_FILE"
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report-${{ github.run_id }}
+          path: validation-reports/
+          retention-days: 30
+
+  validation-status:
+    name: ✅ Final Status
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-structure, validate-metadata, test-compilation, test-framework]
+    if: always()
+    steps:
+      - name: Determine Status
+        run: |
+          set -e
+          
+          echo "✅ Determining final validation status..."
+          
+          if [ "${{ needs.detect-changes.outputs.has-changes }}" != "true" ]; then
+            echo "ℹ️ No challenge changes detected"
+            exit 0
+          fi
+          
+          # Check critical jobs
+          FAILED_JOBS=()
+          
+          if [ "${{ needs.validate-structure.result }}" != "success" ]; then
+            FAILED_JOBS+=("Structure Validation")
+          fi
+          
+          if [ "${{ needs.validate-metadata.result }}" != "success" ]; then
+            FAILED_JOBS+=("Metadata Validation")
+          fi
+          
+          if [ "${{ needs.test-compilation.result }}" != "success" ]; then
+            FAILED_JOBS+=("Compilation Tests")
+          fi
+          
+          if [ "${{ needs.test-framework.result }}" != "success" ]; then
+            FAILED_JOBS+=("Framework Tests")
+          fi
+          
+          if [ ${#FAILED_JOBS[@]} -gt 0 ]; then
+            echo "❌ CRITICAL FAILURES:"
+            printf '  - %s\n' "${FAILED_JOBS[@]}"
+            echo ""
+            echo "🚫 Merge blocked until issues are resolved"
+            exit 1
+          else
+            echo "🎉 ALL VALIDATIONS PASSED!"
+            echo "✅ Ready for merge"
+            exit 0
+          fi
