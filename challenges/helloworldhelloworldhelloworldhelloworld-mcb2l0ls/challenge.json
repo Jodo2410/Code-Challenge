@@ -9,11 +9,14 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-24T22:01:06.089Z",
-  "status": "approved",
+  "status": "reported",
   "starterCode": "HelloworldHelloworldHelloworldHelloworld",
   "solution": "HelloworldHelloworldHelloworldHelloworldHelloworld",
   "tests": "HelloworldHelloworldHelloworldHelloworldHelloworld",
   "testClassName": "Tests",
   "mainClassName": "Helloworldhelloworldhelloworldhelloworld",
-  "functionName": "helloworldhelloworldhelloworldhelloworld"
+  "functionName": "helloworldhelloworldhelloworldhelloworld",
+  "reportedIssueNumber": 25,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/25",
+  "isHidden": true
 }
