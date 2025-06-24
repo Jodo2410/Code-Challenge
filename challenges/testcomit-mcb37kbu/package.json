@@ -1,0 +1,15 @@
+{
+  "name": "testcomit",
+  "version": "1.0.0",
+  "description": "TESTCOMITTESTCOMITTESTCOMITTESTCOMIT",
+  "main": "starter.js",
+  "scripts": {
+    "test": "node tests.js",
+    "start": "node starter.js"
+  },
+  "dependencies": {},
+  "keywords": [
+    "TESTCOMIT"
+  ],
+  "author": "Jodo2410"
+}
