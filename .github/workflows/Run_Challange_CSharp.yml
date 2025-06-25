@@ -1,4 +1,4 @@
-name: 🧪 Validate Challenge Build + Tests
+name: 🔍 Test geänderte C# Challenges
 
 on:
   pull_request:
@@ -6,12 +6,12 @@ on:
       - 'challenges/**'
 
 jobs:
-  validate:
-    name: 🔧 Build & Test Challenge
+  test-csharp-solutions:
+    name: 🧪 Teste C# Challenges mit solution.cs
     runs-on: ubuntu-latest
 
     steps:
-      - name: ⬇️ Checkout Repository
+      - name: 📦 Repository auschecken
         uses: actions/checkout@v3
 
       - name: 🛠️ Setup .NET SDK
@@ -19,12 +19,48 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: 🔍 Suche alle Challenge-Projekte
+      - name: 🔍 Finde geänderte C#-Challenges
+        id: find-csharp
         run: |
-          for proj in $(find challenges -name '*.csproj'); do
-            echo "📦 Baue Projekt: $proj"
-            dotnet build "$proj" --configuration Release
+          echo "📁 Untersuche geänderte Dateien..."
+          CHANGED_DIRS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} \
+            | grep '^challenges/' \
+            | cut -d/ -f2 \
+            | sort -u)
 
-            echo "🧪 Führe Tests aus:"
-            dotnet run --project "$proj" || exit 1
+          echo "✅ Geänderte Challenge-Verzeichnisse:"
+          echo "$CHANGED_DIRS"
+
+          CSHARP_DIRS=""
+          for DIR in $CHANGED_DIRS; do
+            if [ -f "challenges/$DIR/solution.cs" ] && [ -f "challenges/$DIR/$DIR.csproj" ]; then
+              CSHARP_DIRS="$CSHARP_DIRS challenges/$DIR"
+            fi
+          done
+
+          echo "csharp_dirs=$CSHARP_DIRS" >> $GITHUB_OUTPUT
+
+      - name: 🧪 Baue & teste alle betroffenen Challenges
+        run: |
+          for DIR in ${{ steps.find-csharp.outputs.csharp_dirs }}; do
+            echo "🔧 Bearbeite: $DIR"
+
+            echo "➡️ Ersetze starter.cs durch solution.cs für Test"
+            if [ -f "$DIR/starter.cs" ]; then
+              mv "$DIR/starter.cs" "$DIR/starter.bak.cs"
+            fi
+            cp "$DIR/solution.cs" "$DIR/starter.cs"
+
+            echo "📦 Baue Projekt: $DIR"
+            dotnet build "$DIR/*.csproj" --configuration Release
+
+            echo "🧪 Starte Tests via TestRunner:"
+            dotnet run --project "$DIR/*.csproj" || exit 1
+
+            echo "✅ Tests bestanden für $DIR"
+
+            # Optional: Starter zurücksetzen
+            if [ -f "$DIR/starter.bak.cs" ]; then
+              mv "$DIR/starter.bak.cs" "$DIR/starter.cs"
+            fi
           done
