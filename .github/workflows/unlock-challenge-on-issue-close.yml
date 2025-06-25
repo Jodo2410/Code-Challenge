@@ -1,0 +1,65 @@
+name: 🟢 Unlock Challenge bei Issue-Schließung
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  unlock:
+    if: contains(github.event.issue.labels.*.name, 'challenge-error')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📦 Repository auschecken
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔍 Lese Challenge-ID aus Issue
+        id: extract
+        run: |
+          echo "🔍 Analysiere Issue-Body..."
+
+          echo "${{ github.event.issue.body }}" > issue.txt
+          ID=$(grep -E '^ID:' issue.txt | cut -d ':' -f2 | xargs)
+          echo "Gefundene Challenge-ID: $ID"
+          echo "challenge_id=$ID" >> $GITHUB_OUTPUT
+
+      - name: 🔧 Patch challenge.json → status: approved
+        run: |
+          ID=${{ steps.extract.outputs.challenge_id }}
+          FILE="challenges/$ID/challenge.json"
+
+          echo "🔧 Setze Status zurück in $FILE"
+          jq '.status = "approved" | .hasErrors = false | del(.errorReport)' "$FILE" > tmp && mv tmp "$FILE"
+
+      - name: 🔧 Patch error-report.json → isResolved: true
+        run: |
+          ID=${{ steps.extract.outputs.challenge_id }}
+          FILE="challenges/$ID/error-report.json"
+
+          if [ -f "$FILE" ]; then
+            echo "📝 Aktualisiere Fehlerbericht: $FILE"
+            jq '.isResolved = true' "$FILE" > tmp && mv tmp "$FILE"
+          else
+            echo "ℹ️ Kein error-report.json gefunden – übersprungen."
+          fi
+
+      - name: ✅ Commit & Push Änderungen
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+
+          git checkout -b unlock-${{ steps.extract.outputs.challenge_id }}
+          git add challenges/${{ steps.extract.outputs.challenge_id }}
+          git commit -m "🔓 Re-enabled challenge ${{ steps.extract.outputs.challenge_id }} after issue closure"
+          git push origin unlock-${{ steps.extract.outputs.challenge_id }}
+
+      - name: 📦 Erstelle Pull Request zur Freigabe
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "🔓 Freigabe Challenge: ${{ steps.extract.outputs.challenge_id }}"
+          body: |
+            Dieses PR aktiviert die Challenge wieder nach manueller Freigabe im Issue #${{ github.event.issue.number }}.
+          head: unlock-${{ steps.extract.outputs.challenge_id }}
+          base: main
