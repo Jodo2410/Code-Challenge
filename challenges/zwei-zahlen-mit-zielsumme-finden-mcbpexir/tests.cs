@@ -1,7 +1,7 @@
 using System;
 
 public static class Tests {
-    public static void RunTests() {
+    public static void RunAllTests() {
         int passed = 0;
         int total = 5;
 
