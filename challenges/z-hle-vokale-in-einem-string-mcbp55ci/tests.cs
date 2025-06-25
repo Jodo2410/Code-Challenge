@@ -11,8 +11,4 @@ public static class Tests {
 
         Console.WriteLine("Alle Tests erfolgreich bestanden.");
     }
-
-    public static void Main() {
-        RunTests();
-    }
 }
