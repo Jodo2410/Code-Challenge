@@ -1,0 +1,22 @@
+{
+  "id": "z-hle-vokale-in-einem-string-mcbix9mj",
+  "title": "Zähle Vokale in einem String",
+  "description": "Schreibe eine Funktion in C++, die die Anzahl der Vokale (a, e, i, o, u) in einem gegebenen String zählt. Die Groß- und Kleinschreibung soll ignoriert werden.\n\nBeispiel:\nInput: \"Hallo Welt\"\nOutput: 3\n\nInput: \"OpenAI ist großartig!\"\nOutput: 8",
+  "difficulty": "easy",
+  "language": "javascript",
+  "tags": [
+    "string",
+    "einsteiger",
+    "zeichenverarbeitung",
+    "c++ grundlagen"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-25T05:38:31.959Z",
+  "status": "approved",
+  "starterCode": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint countVowels(const string& input) {\n    // TODO: Implementiere die Funktion\n    return 0;\n}\n\nint main() {\n    string text;\n    cout << \"Gib einen Text ein: \";\n    getline(cin, text);\n    cout << \"Anzahl der Vokale: \" << countVowels(text) << endl;\n    return 0;\n}",
+  "solution": "#include <iostream>\n#include <string>\n#include <cctype>\nusing namespace std;\n\nint countVowels(const string& input) {\n    int count = 0;\n    for (char c : input) {\n        c = tolower(c);\n        if (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u') {\n            count++;\n        }\n    }\n    return count;\n}\n\nint main() {\n    string text;\n    cout << \"Gib einen Text ein: \";\n    getline(cin, text);\n    cout << \"Anzahl der Vokale: \" << countVowels(text) << endl;\n    return 0;\n}",
+  "tests": "#include <cassert>\n\nvoid runTests() {\n    assert(countVowels(\"Hallo Welt\") == 3);\n    assert(countVowels(\"OpenAI ist großartig!\") == 8);\n    assert(countVowels(\"xyz\") == 0);\n    assert(countVowels(\"AEIOUaeiou\") == 10);\n    assert(countVowels(\"\") == 0);\n    cout << \"Alle Tests bestanden!\" << endl;\n}",
+  "testClassName": "Tests",
+  "mainClassName": "ZhleVokaleInEinemString",
+  "functionName": "zhleVokaleInEinemString"
+}
