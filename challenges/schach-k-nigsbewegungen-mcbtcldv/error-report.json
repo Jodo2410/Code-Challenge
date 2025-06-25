@@ -1,0 +1,11 @@
+{
+  "id": "schach-k-nigsbewegungen-mcbtcldv",
+  "title": "Schach - Königsbewegungen",
+  "errorMessage": "❌ Fehler beim Laden der Challenge: Error: ❌ KONSISTENZ-FEHLER: tests.cs definiert nicht Klasse Tests!",
+  "errorType": "template",
+  "timestamp": "2025-06-25T13:35:32.303Z",
+  "isResolved": false,
+  "reportedBy": "Jodo2410",
+  "issueNumber": 57,
+  "issueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/57"
+}
