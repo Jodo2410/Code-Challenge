@@ -32,7 +32,5 @@ public static class Tests {
         } else {
             Console.WriteLine("Test 4 fehlgeschlagen ✗");
         }
-
-        Console.WriteLine($"{passed}/{total} Tests bestanden.");
     }
 }
