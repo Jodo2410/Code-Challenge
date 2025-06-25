@@ -120,6 +120,9 @@
   "hints": [],
   "author": "project-uploader",
   "createdAt": "2025-06-25T12:36:00.846Z",
-  "status": "approved",
-  "type": "project"
+  "status": "reported",
+  "type": "project",
+  "reportedIssueNumber": 60,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/60",
+  "isHidden": true
 }
