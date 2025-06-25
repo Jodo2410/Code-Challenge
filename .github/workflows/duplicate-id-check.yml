@@ -1,0 +1,39 @@
+name: 🧪 Duplicate Challenge ID Check
+
+on:
+  pull_request:
+    paths:
+      - 'challenges/**/challenge.json'
+
+jobs:
+  check-duplicate-ids:
+    name: 🔍 Überprüfe auf doppelte Challenge-IDs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📦 Repository auschecken
+        uses: actions/checkout@v3
+
+      - name: 🔎 Durchsuche alle challenge.json-Dateien
+        run: |
+          echo "🔍 Scanne alle challenge.json Dateien..."
+
+          # Finde alle IDs
+          IDS=$(find challenges -type f -name 'challenge.json' -exec jq -r '.id' {} \;)
+
+          echo "✅ Gefundene IDs:"
+          echo "$IDS"
+
+          # Prüfe auf Duplikate
+          DUPLICATES=$(echo "$IDS" | sort | uniq -d)
+
+          if [ -n "$DUPLICATES" ]; then
+            echo ""
+            echo "❌ Doppelte Challenge-IDs gefunden:"
+            echo "$DUPLICATES"
+            echo ""
+            echo "🔴 Bitte stelle sicher, dass jede challenge.json eine eindeutige 'id' hat."
+            exit 1
+          else
+            echo "✅ Keine Duplikate gefunden."
+          fi
