@@ -1,0 +1,30 @@
+name: 🧪 Validate Challenge Build + Tests
+
+on:
+  pull_request:
+    paths:
+      - 'challenges/**'
+
+jobs:
+  validate:
+    name: 🔧 Build & Test Challenge
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: 🛠️ Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 🔍 Suche alle Challenge-Projekte
+        run: |
+          for proj in $(find challenges -name '*.csproj'); do
+            echo "📦 Baue Projekt: $proj"
+            dotnet build "$proj" --configuration Release
+
+            echo "🧪 Führe Tests aus:"
+            dotnet run --project "$proj" || exit 1
+          done
