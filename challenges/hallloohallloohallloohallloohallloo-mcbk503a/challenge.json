@@ -9,11 +9,14 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-25T06:12:32.020Z",
-  "status": "approved",
+  "status": "reported",
   "starterCode": "HalllooHalllooHalllooHalllooHalllooHalllooHalllooHalllooHallloo",
   "solution": "HalllooHalllooHalllooHalllooHalllooHalllooHalllooHalllooHalllooHallloo",
   "tests": "HalllooHalllooHalllooHalllooHalllooHalllooHalllooHallloo",
   "testClassName": "Tests",
   "mainClassName": "Hallloohallloohallloohallloohallloo",
-  "functionName": "hallloohallloohallloohallloohallloo"
+  "functionName": "hallloohallloohallloohallloohallloo",
+  "reportedIssueNumber": 32,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/32",
+  "isHidden": true
 }
