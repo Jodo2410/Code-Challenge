@@ -1,0 +1,24 @@
+{
+  "id": "l-ngstes-subarray-mit-summe-gleich-k-mcda2qfj",
+  "title": "Längstes Subarray mit Summe gleich K",
+  "description": "Gegeben ist ein Array von Ganzzahlen `nums` und eine Zielsumme `k`. Deine Aufgabe ist es, die Länge des längsten zusammenhängenden Subarrays zu ermitteln, dessen Summe genau `k` entspricht.\n\nEin Subarray ist eine zusammenhängende Teilmenge des Arrays.\n\nBeispiel 1:\nInput: nums = [1, -1, 5, -2, 3], k = 3\nOutput: 4\nErklärung: Das Subarray [1, -1, 5, -2] hat die Summe 3 und die Länge 4.\n\nBeispiel 2:\nInput: nums = [-2, -1, 2, 1], k = 1\nOutput: 2\nErklärung: Das Subarray [2, -1] ergibt die Summe 1.\n\nBeispiel 3:\nInput: nums = [1, 2, 3], k = 6\nOutput: 3\n\nHinweis: Ziel ist eine Lösung mit einer Zeitkomplexität von O(n).",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": [
+    "arrays",
+    "hashmap",
+    "prefixsum",
+    "subarray",
+    "csharp",
+    "medium"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-26T11:06:22.399Z",
+  "status": "approved",
+  "starterCode": "using System;\nusing System.Collections.Generic;\n\npublic static class Solution {\n    public static int MaxSubArrayLen(int[] nums, int k) {\n        // Deine Lösung hier\n        return 0;\n    }\n}",
+  "solution": "using System;\nusing System.Collections.Generic;\n\npublic static class Solution {\n    public static int MaxSubArrayLen(int[] nums, int k) {\n        Dictionary<int, int> prefixSums = new Dictionary<int, int>();\n        int sum = 0;\n        int maxLen = 0;\n\n        for (int i = 0; i < nums.Length; i++) {\n            sum += nums[i];\n\n            if (sum == k) {\n                maxLen = i + 1;\n            }\n\n            if (prefixSums.ContainsKey(sum - k)) {\n                maxLen = Math.Max(maxLen, i - prefixSums[sum - k]);\n            }\n\n            if (!prefixSums.ContainsKey(sum)) {\n                prefixSums[sum] = i;\n            }\n        }\n\n        return maxLen;\n    }\n}",
+  "tests": "using System;\n\npublic static class Tests {\n    public static void RunAllTests() {\n        Test(new int[] {1, -1, 5, -2, 3}, 3, 4, \"Test 1\");\n        Test(new int[] {-2, -1, 2, 1}, 1, 2, \"Test 2\");\n        Test(new int[] {1, 2, 3}, 6, 3, \"Test 3\");\n        Test(new int[] {1, 2, 3}, 7, 0, \"Test 4 - Keine Übereinstimmung\");\n        Test(new int[] {1, -1, 1, -1, 1, -1}, 0, 6, \"Test 5 - Ganze Länge null\");\n    }\n\n    private static void Test(int[] nums, int k, int expected, string testName) {\n        int result = Solution.MaxSubArrayLen(nums, k);\n        if (result == expected) {\n            Console.WriteLine($\"[✔] {testName} bestanden\");\n        } else {\n            Console.WriteLine($\"[✘] {testName} fehlgeschlagen: erwartet {expected}, erhalten {result}\");\n        }\n    }\n}",
+  "testClassName": "Tests",
+  "mainClassName": "LngstesSubarrayMitSummeGleichK",
+  "functionName": "LngstesSubarrayMitSummeGleichK"
+}
