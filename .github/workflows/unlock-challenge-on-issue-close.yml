@@ -311,7 +311,7 @@ jobs:
       
       - name: 🔍 Check Discord Webhook Secret
         if: steps.release.outputs.success == 'true'
-        id: check-discord-secret
+        id: check-discord-webhook
         run: |
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
             echo "discord_available=true" >> $GITHUB_OUTPUT
@@ -320,7 +320,7 @@ jobs:
           fi
       
       - name: 📢 Notify Success via Discord/Slack (Optional)
-        if: steps.release.outputs.success == 'true' && steps.check-discord-secret.outputs.discord_available == 'true'
+        if: steps.release.outputs.success == 'true' && steps.check-discord-webhook.outputs.discord_available == 'true'
         run: |
           # Optional: Discord/Slack Benachrichtigung
           CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
@@ -360,6 +360,7 @@ jobs:
       
       - name: 🔍 Validate Challenge Structure
         if: steps.release.outputs.success == 'true'
+        id: validate-challenge-structure
         run: |
           CHALLENGE_FOLDER="${{ steps.extract-challenge.outputs.challenge_folder }}"
           CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
