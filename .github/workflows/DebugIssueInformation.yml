@@ -1,169 +1,172 @@
-name: 🔍 Debug Issue Information
+name: 🔍 Debug Challenge-ID Extraktion
 
 on:
   issues:
-    types: [opened, closed, labeled, unlabeled, edited]
+    types: [closed, opened, labeled]
+
+permissions:
+  issues: write
 
 jobs:
-  debug-issue:
+  debug-extraction:
+    if: |
+      contains(github.event.issue.labels.*.name, 'challenge-error') ||
+      contains(github.event.issue.title, 'Challenge Error Report') ||
+      contains(github.event.issue.body, '🚨 Challenge Error Report')
     runs-on: ubuntu-latest
     
     steps:
-      - name: 🔍 Zeige alle Issue-Informationen
+      - name: 📦 Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: 🔍 Issue Information
         run: |
-          echo "🔍 VOLLSTÄNDIGE ISSUE DEBUG-INFORMATIONEN"
-          echo "================================================"
-          echo ""
-          echo "📋 Issue Basis-Daten:"
-          echo "  Nummer: ${{ github.event.issue.number }}"
-          echo "  Titel: ${{ github.event.issue.title }}"
-          echo "  State: ${{ github.event.issue.state }}"
-          echo "  Action: ${{ github.event.action }}"
-          echo "  Author: ${{ github.event.issue.user.login }}"
-          echo "  Created: ${{ github.event.issue.created_at }}"
-          echo "  Updated: ${{ github.event.issue.updated_at }}"
+          echo "=== ISSUE DEBUG INFORMATION ==="
+          echo "Issue Number: ${{ github.event.issue.number }}"
+          echo "Issue Title: ${{ github.event.issue.title }}"
+          echo "Issue Action: ${{ github.event.action }}"
+          echo "Issue State: ${{ github.event.issue.state }}"
           echo ""
           
-      - name: 📋 Zeige Issue Labels
+      - name: 📋 Show Issue Body Raw
         run: |
-          echo "📋 ISSUE LABELS:"
-          echo "Raw Labels JSON:"
-          echo '${{ toJSON(github.event.issue.labels) }}'
-          echo ""
-          echo "Label Namen (falls vorhanden):"
-          if [ '${{ toJSON(github.event.issue.labels) }}' != '[]' ]; then
-            echo '${{ toJSON(github.event.issue.labels) }}' | jq -r '.[].name'
-          else
-            echo "❌ Keine Labels gefunden!"
-          fi
-          echo ""
-          
-      - name: 📄 Zeige Issue Body
-        run: |
-          echo "📄 ISSUE BODY:"
-          echo "=============="
+          echo "=== RAW ISSUE BODY ==="
           cat << 'EOF'
           ${{ github.event.issue.body }}
           EOF
           echo ""
-          echo "=============="
+          echo "=== END RAW ISSUE BODY ==="
           
-      - name: 🔍 Challenge-ID Test-Extraktion
+      - name: 🧪 Test Challenge-ID Extraction
         run: |
-          echo "🔍 TESTE CHALLENGE-ID EXTRAKTION:"
-          echo "================================"
+          echo "=== CHALLENGE-ID EXTRACTION TESTS ==="
           
-          # Issue-Body in Datei speichern
-          cat << 'EOF' > issue_body.txt
-          ${{ github.event.issue.body }}
-          EOF
+          # Issue-Body in Variable speichern
+          ISSUE_BODY='${{ github.event.issue.body }}'
           
-          echo "📝 Roher Issue-Body gespeichert in issue_body.txt"
+          echo "📝 Issue Body Length: ${#ISSUE_BODY} characters"
           echo ""
           
-          # Verschiedene Extraktions-Muster testen:
-          echo "🧪 Test 1: **ID:** Pattern"
-          ID1=$(grep -E '\*\*ID:\*\*' issue_body.txt | sed 's/.*\*\*ID:\*\*[[:space:]]*//' | head -1 | xargs || echo "")
-          echo "  Gefunden: '$ID1'"
+          echo "🧪 Test 1: Suche nach **ID:** Pattern"
+          echo "$ISSUE_BODY" | grep -n "ID:" || echo "Kein ID: gefunden"
+          echo ""
           
-          echo "🧪 Test 2: ID: Pattern (Plain)"
-          ID2=$(grep -E '^ID:' issue_body.txt | cut -d ':' -f2 | xargs || echo "")
-          echo "  Gefunden: '$ID2'"
+          echo "🧪 Test 2: Alle **..:** Patterns"
+          echo "$ISSUE_BODY" | grep -n "\*\*.*:\*\*" || echo "Keine **...:** Patterns gefunden"
+          echo ""
           
-          echo "🧪 Test 3: Regex mit oE"
-          ID3=$(grep -oE '\*\*ID:\*\*[[:space:]]*[a-zA-Z0-9_-]+' issue_body.txt | sed 's/.*\*\*ID:\*\*[[:space:]]*//' || echo "")
-          echo "  Gefunden: '$ID3'"
+          echo "🧪 Test 3: Zeilen mit 'mcbt'"  
+          echo "$ISSUE_BODY" | grep -n "mcbt" || echo "Kein 'mcbt' gefunden"
+          echo ""
           
-          echo "🧪 Test 4: Erweiterte Regex"
-          ID4=$(echo "${{ github.event.issue.body }}" | grep -oE '\*\*ID:\*\*[[:space:]]*[a-zA-Z0-9_-]+' | sed 's/.*\*\*ID:\*\*[[:space:]]*//' || echo "")
-          echo "  Gefunden: '$ID4'"
+          echo "🧪 Test 4: Extraction Method 1"
+          ID1=$(echo "$ISSUE_BODY" | grep -oE '\*\*ID:\*\*[[:space:]]*[a-zA-Z0-9_-]+' | sed 's/.*\*\*ID:\*\*[[:space:]]*//' | head -1 | xargs 2>/dev/null || echo "")
+          echo "Method 1 Result: '$ID1'"
+          
+          echo "🧪 Test 5: Extraction Method 2 (simple grep)"
+          ID2=$(echo "$ISSUE_BODY" | grep -o "balanced-binary-search-tree-validator-mcbt0fnk" || echo "")
+          echo "Method 2 Result: '$ID2'"
+          
+          echo "🧪 Test 6: Find any mcbt pattern"
+          ID3=$(echo "$ISSUE_BODY" | grep -oE '[a-zA-Z0-9-]*mcbt[a-zA-Z0-9]+' | head -1 || echo "")
+          echo "Method 3 Result: '$ID3'"
+          
+          echo "🧪 Test 7: Manual search for the specific ID"
+          if echo "$ISSUE_BODY" | grep -q "balanced-binary-search-tree-validator-mcbt0fnk"; then
+            echo "✅ Found specific ID: balanced-binary-search-tree-validator-mcbt0fnk"
+            FINAL_ID="balanced-binary-search-tree-validator-mcbt0fnk"
+          else
+            echo "❌ Specific ID not found"
+            FINAL_ID=""
+          fi
           
           echo ""
-          echo "📊 ERGEBNIS:"
-          FINAL_ID=""
-          if [ -n "$ID1" ]; then FINAL_ID="$ID1"; fi
-          if [ -z "$FINAL_ID" ] && [ -n "$ID2" ]; then FINAL_ID="$ID2"; fi
-          if [ -z "$FINAL_ID" ] && [ -n "$ID3" ]; then FINAL_ID="$ID3"; fi
-          if [ -z "$FINAL_ID" ] && [ -n "$ID4" ]; then FINAL_ID="$ID4"; fi
-          
+          echo "📊 FINAL RESULT:"
           if [ -n "$FINAL_ID" ]; then
-            echo "✅ Challenge-ID erfolgreich extrahiert: '$FINAL_ID'"
+            echo "✅ Challenge-ID: $FINAL_ID"
           else
-            echo "❌ Keine Challenge-ID gefunden!"
+            echo "❌ No Challenge-ID found"
           fi
           
-          rm -f issue_body.txt
-          
-      - name: 🧪 Workflow-Trigger-Bedingungen testen
+      - name: 📂 Check Repository Structure
         run: |
-          echo "🧪 TESTE WORKFLOW-TRIGGER-BEDINGUNGEN:"
-          echo "====================================="
-          
-          # Test 1: Label 'challenge-error'
-          LABEL_CHECK="${{ contains(github.event.issue.labels.*.name, 'challenge-error') }}"
-          echo "1. Label 'challenge-error': $LABEL_CHECK"
-          
-          # Test 2: Titel enthält "Challenge Error Report"
-          TITLE_CHECK="${{ contains(github.event.issue.title, 'Challenge Error Report') }}"
-          echo "2. Titel enthält 'Challenge Error Report': $TITLE_CHECK"
-          
-          # Test 3: Body enthält "🚨 Challenge Error Report"
-          BODY_CHECK="${{ contains(github.event.issue.body, '🚨 Challenge Error Report') }}"
-          echo "3. Body enthält '🚨 Challenge Error Report': $BODY_CHECK"
-          
-          # Test 4: Body enthält "**ID:**"
-          ID_CHECK="${{ contains(github.event.issue.body, '**ID:**') }}"
-          echo "4. Body enthält '**ID:**': $ID_CHECK"
-          
+          echo "=== REPOSITORY STRUCTURE ==="
+          echo "📁 Current directory:"
+          pwd
+          ls -la
           echo ""
-          echo "📊 ZUSAMMENFASSUNG:"
-          if [ "$LABEL_CHECK" = "true" ] || [ "$TITLE_CHECK" = "true" ] || [ "$BODY_CHECK" = "true" ] || [ "$ID_CHECK" = "true" ]; then
-            echo "✅ Unlock-Workflow SOLLTE ausgeführt werden!"
-            echo "   Mindestens eine Bedingung ist erfüllt."
+          
+          echo "📁 Check if challenges folder exists:"
+          if [ -d "challenges" ]; then
+            echo "✅ challenges/ folder exists"
+            echo "📁 Contents of challenges/:"
+            ls -la challenges/
+            
+            echo ""
+            echo "🔍 Look for the specific challenge:"
+            if [ -d "challenges/balanced-binary-search-tree-validator-mcbt0fnk" ]; then
+              echo "✅ Challenge folder exists: challenges/balanced-binary-search-tree-validator-mcbt0fnk"
+              echo "📁 Contents:"
+              ls -la "challenges/balanced-binary-search-tree-validator-mcbt0fnk/"
+              
+              if [ -f "challenges/balanced-binary-search-tree-validator-mcbt0fnk/challenge.json" ]; then
+                echo "✅ challenge.json exists"
+                echo "📄 Current content:"
+                cat "challenges/balanced-binary-search-tree-validator-mcbt0fnk/challenge.json"
+              else
+                echo "❌ challenge.json missing"
+              fi
+            else
+              echo "❌ Challenge folder does not exist"
+              echo "🔍 Available challenges:"
+              find challenges/ -maxdepth 1 -type d 2>/dev/null | head -10
+            fi
           else
-            echo "❌ Unlock-Workflow wird NICHT ausgeführt!"
-            echo "   Keine der Bedingungen ist erfüllt."
+            echo "❌ challenges/ folder does not exist"
           fi
           
-      - name: 📤 Issue-Kommentar mit Debug-Info
-        if: github.event.action == 'closed'
+      - name: 🛠️ Test jq availability
+        run: |
+          echo "=== JQ TEST ==="
+          if command -v jq >/dev/null 2>&1; then
+            echo "✅ jq is available"
+            jq --version
+          else
+            echo "❌ jq is not available"
+            echo "Available tools:"
+            which grep sed awk || echo "Basic tools check"
+          fi
+          
+      - name: 💬 Report Results
         uses: actions/github-script@v7
         with:
           script: |
-            const labelCheck = ${{ contains(github.event.issue.labels.*.name, 'challenge-error') }};
-            const titleCheck = ${{ contains(github.event.issue.title, 'Challenge Error Report') }};
-            const bodyCheck = ${{ contains(github.event.issue.body, '🚨 Challenge Error Report') }};
-            const idCheck = ${{ contains(github.event.issue.body, '**ID:**') }};
-            
-            const shouldTrigger = labelCheck || titleCheck || bodyCheck || idCheck;
+            const issueBody = `${{ github.event.issue.body }}`;
+            const hasSpecificId = issueBody.includes('balanced-binary-search-tree-validator-mcbt0fnk');
+            const hasIdPattern = issueBody.includes('**ID:**');
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## 🔍 Debug Information für Issue #${context.issue.number}
+              body: `## 🔍 Debug Results für Issue #${context.issue.number}
               
-              **Issue geschlossen - Workflow-Trigger-Analyse:**
+              **Issue Debug:** Challenge-ID Extraktion getestet
               
-              ### 🧪 Trigger-Bedingungen:
-              - ✅ Label 'challenge-error': \`${labelCheck}\`
-              - ✅ Titel enthält 'Challenge Error Report': \`${titleCheck}\`
-              - ✅ Body enthält '🚨 Challenge Error Report': \`${bodyCheck}\`
-              - ✅ Body enthält '**ID:**': \`${idCheck}\`
+              ### 📊 Ergebnisse:
+              - ✅ Issue Body contains specific ID: \`${hasSpecificId}\`
+              - ✅ Issue Body contains **ID:** pattern: \`${hasIdPattern}\`
+              - ✅ Issue Body length: ${issueBody.length} characters
               
-              ### 📊 Ergebnis:
-              ${shouldTrigger ? 
-                '✅ **Unlock-Workflow SOLLTE ausgeführt werden**' : 
-                '❌ **Unlock-Workflow wird NICHT ausgeführt**'
-              }
+              ### 🔍 Expected Challenge-ID:
+              \`balanced-binary-search-tree-validator-mcbt0fnk\`
               
-              ### 📋 Labels auf diesem Issue:
-              ${context.payload.issue.labels.map(label => \`- \`${label.name}\`\`).join('\\n') || 'Keine Labels gefunden'}
-              
-              ### 🔗 Nützliche Links:
-              - [Workflow-Runs anzeigen](https://github.com/${context.repo.owner}/${context.repo.repo}/actions)
-              - [Debug-Workflow-Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              ### 📋 Next Steps:
+              Check the workflow logs in the [Actions tab](https://github.com/${context.repo.owner}/${context.repo.repo}/actions) to see:
+              1. If the Challenge-ID was extracted correctly
+              2. If the challenge folder exists in the repository
+              3. If jq tool is available for JSON processing
               
               ---
-              🤖 *Debug-Kommentar vom Issue-Debug-Workflow*`
+              🤖 *Debug workflow completed - check logs for details*`
             });
