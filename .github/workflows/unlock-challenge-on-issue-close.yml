@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   unlock-challenge:
-    # Trigger nur bei Challenge Error Reports
     if: |
       contains(github.event.issue.labels.*.name, 'challenge-error') ||
       contains(github.event.issue.title, 'Challenge Error Report') ||
@@ -31,40 +30,28 @@ jobs:
         run: |
           echo "🔍 Starte universelle Challenge-ID Extraktion..."
           
-          # Issue-Body sicher in Variable laden
           ISSUE_BODY='${{ github.event.issue.body }}'
           
           echo "📄 Issue-Body Länge: ${#ISSUE_BODY} Zeichen"
           
-          # Methode 1: **ID:** Pattern (Standard Format)
           echo "🧪 Methode 1: **ID:** Pattern"
           ID1=$(echo "$ISSUE_BODY" | grep -oE '\*\*ID:\*\*[[:space:]]*[a-zA-Z0-9._-]+' | sed 's/.*\*\*ID:\*\*[[:space:]]*//' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
           echo "   Gefunden: '$ID1'"
           
-          # Methode 2: ID: Pattern (ohne Markdown)
           echo "🧪 Methode 2: ID: Pattern"
           ID2=$(echo "$ISSUE_BODY" | grep -E '^[[:space:]]*ID:[[:space:]]*[a-zA-Z0-9._-]+' | sed 's/.*ID:[[:space:]]*//' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
           echo "   Gefunden: '$ID2'"
           
-          # Methode 3: mcbt Pattern (Challenge-ID Format)
           echo "🧪 Methode 3: mcbt Pattern"
           ID3=$(echo "$ISSUE_BODY" | grep -oE '[a-zA-Z0-9-]+mcbt[a-zA-Z0-9]+' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
           echo "   Gefunden: '$ID3'"
           
-          # Methode 4: Generisches Challenge-ID Pattern (mit Bindestrichen)
           echo "🧪 Methode 4: Generic Challenge Pattern"
           ID4=$(echo "$ISSUE_BODY" | grep -oE '[a-z][a-z0-9-]{10,50}[a-z0-9]' | grep -E '.*-.*-.*' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
           echo "   Gefunden: '$ID4'"
           
-          # Methode 5: Suche nach allem zwischen Anführungszeichen nach "ID"
-          echo "🧪 Methode 5: Quoted ID Pattern"
-          ID5=$(echo "$ISSUE_BODY" | grep -oE 'ID[[:space:]]*[:\"]\*\*[[:space:]]*[a-zA-Z0-9._-]+' | sed 's/.*[[:space:]]//' | tr -d '"*: \t\n\r' 2>/dev/null || echo "")
-          echo "   Gefunden: '$ID5'"
-          
-          # Bestimme die beste ID
           FINAL_ID=""
           
-          # Priorität: ID1 > ID3 > ID2 > ID4 > ID5
           if [ -n "$ID1" ]; then
             FINAL_ID="$ID1"
             echo "✅ Verwende ID aus Methode 1: $FINAL_ID"
@@ -77,12 +64,8 @@ jobs:
           elif [ -n "$ID4" ]; then
             FINAL_ID="$ID4"
             echo "✅ Verwende ID aus Methode 4: $FINAL_ID"
-          elif [ -n "$ID5" ]; then
-            FINAL_ID="$ID5"
-            echo "✅ Verwende ID aus Methode 5: $FINAL_ID"
           fi
           
-          # Validierung
           if [ -z "$FINAL_ID" ]; then
             echo "❌ Keine Challenge-ID gefunden!"
             echo ""
@@ -96,7 +79,6 @@ jobs:
             exit 1
           fi
           
-          # ID bereinigen (für Sicherheit)
           CLEAN_ID=$(echo "$FINAL_ID" | tr -cd 'a-zA-Z0-9._-')
           
           if [ "$CLEAN_ID" != "$FINAL_ID" ]; then
@@ -118,7 +100,6 @@ jobs:
           echo "📁 Challenge-Verzeichnis: $CHALLENGE_DIR"
           echo "📄 Config-Datei: $CONFIG_FILE"
           
-          # Prüfe ob Challenges-Ordner existiert
           if [ ! -d "challenges" ]; then
             echo "❌ Challenges-Hauptordner existiert nicht!"
             echo "📁 Repository-Struktur:"
@@ -126,7 +107,6 @@ jobs:
             exit 1
           fi
           
-          # Prüfe ob Challenge-Ordner existiert
           if [ ! -d "$CHALLENGE_DIR" ]; then
             echo "❌ Challenge-Ordner nicht gefunden: $CHALLENGE_DIR"
             echo ""
@@ -138,7 +118,6 @@ jobs:
             exit 1
           fi
           
-          # Prüfe ob Config-Datei existiert
           if [ ! -f "$CONFIG_FILE" ]; then
             echo "❌ Challenge-Konfiguration nicht gefunden: $CONFIG_FILE"
             echo ""
@@ -149,7 +128,6 @@ jobs:
           
           echo "✅ Challenge existiert und ist gültig"
           
-          # Aktuellen Status auslesen (falls möglich)
           if command -v jq >/dev/null 2>&1; then
             CURRENT_STATUS=$(jq -r '.status // "unknown"' "$CONFIG_FILE" 2>/dev/null || echo "unknown")
             echo "📊 Aktueller Status: $CURRENT_STATUS"
@@ -167,33 +145,23 @@ jobs:
           echo "🛠️ Setze Challenge-Status zurück..."
           echo "📄 Datei: $CONFIG_FILE"
           
-          # Backup erstellen
           cp "$CONFIG_FILE" "$CONFIG_FILE.backup"
           echo "💾 Backup erstellt: $CONFIG_FILE.backup"
           
-          # Status zurücksetzen mit sed (funktioniert ohne jq)
           echo "🔧 Aktualisiere Status-Felder..."
           
-          # Status auf approved setzen
           sed -i 's/"status"[[:space:]]*:[[:space:]]*"[^"]*"/"status": "approved"/g' "$CONFIG_FILE"
-          
-          # Fehler-Flags entfernen/zurücksetzen
           sed -i 's/"hasErrors"[[:space:]]*:[[:space:]]*true/"hasErrors": false/g' "$CONFIG_FILE"
           sed -i 's/"isHidden"[[:space:]]*:[[:space:]]*true/"isHidden": false/g' "$CONFIG_FILE"
-          
-          # Gemeldete Issue-Referenzen entfernen
           sed -i '/"reportedIssueNumber"/d' "$CONFIG_FILE"
           sed -i '/"reportedIssueUrl"/d' "$CONFIG_FILE"
           sed -i '/"errorReport"/d' "$CONFIG_FILE"
-          
-          # Zusätzliche Bereinigung für mögliche andere Status-Werte
           sed -i 's/"status"[[:space:]]*:[[:space:]]*"reported"/"status": "approved"/g' "$CONFIG_FILE"
           sed -i 's/"status"[[:space:]]*:[[:space:]]*"pending"/"status": "approved"/g' "$CONFIG_FILE"
           sed -i 's/"status"[[:space:]]*:[[:space:]]*"rejected"/"status": "approved"/g' "$CONFIG_FILE"
           
           echo "✅ Status-Update abgeschlossen"
           
-          # Validierung (falls jq verfügbar)
           if command -v jq >/dev/null 2>&1; then
             if jq . "$CONFIG_FILE" >/dev/null 2>&1; then
               NEW_STATUS=$(jq -r '.status' "$CONFIG_FILE" 2>/dev/null || echo "unknown")
@@ -207,7 +175,7 @@ jobs:
           
           echo "📄 Neue Dateigröße: $(wc -c < "$CONFIG_FILE") bytes"
       
-      - name: 📝 Error-Report aktualisieren (optional)
+      - name: 📝 Error-Report aktualisieren
         run: |
           ID=${{ steps.extract_id.outputs.challenge_id }}
           ERROR_FILE="challenges/$ID/error-report.json"
@@ -215,10 +183,8 @@ jobs:
           if [ -f "$ERROR_FILE" ]; then
             echo "📝 Aktualisiere Error-Report: $ERROR_FILE"
             
-            # Einfache sed-basierte Aktualisierung
             sed -i 's/"isResolved"[[:space:]]*:[[:space:]]*false/"isResolved": true/g' "$ERROR_FILE"
             
-            # Falls jq verfügbar, erweiterte Aktualisierung
             if command -v jq >/dev/null 2>&1; then
               TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
               jq --arg timestamp "$TIMESTAMP" --argjson issue "${{ github.event.issue.number }}" '
@@ -239,7 +205,6 @@ jobs:
         run: |
           ID=${{ steps.extract_id.outputs.challenge_id }}
           
-          # Git konfigurieren
           git config user.name "challenge-unlock-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
@@ -250,18 +215,14 @@ jobs:
           else
             echo "📝 Committen der Änderungen..."
             
-            # Nur die Challenge-Dateien hinzufügen
             git add "challenges/$ID/"
             
-            # Commit mit aussagekräftiger Nachricht
             git commit -m "🔓 Challenge automatisch entsperrt: $ID
 
 Entsperrt nach Issue-Schließung #${{ github.event.issue.number }}
 ✅ Status: approved
 🗓️ Entsperrt: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-🤖 Automatisch durch GitHub Actions
-
-Co-authored-by: ${{ github.event.issue.user.login }} <${{ github.event.issue.user.id }}+${{ github.event.issue.user.login }}@users.noreply.github.com>"
+🤖 Automatisch durch GitHub Actions"
             
             echo "📤 Push der Änderungen..."
             git push origin main
@@ -307,7 +268,6 @@ Co-authored-by: ${{ github.event.issue.user.login }} <${{ github.event.issue.use
         with:
           script: |
             try {
-              // Labels hinzufügen
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -320,7 +280,6 @@ Co-authored-by: ${{ github.event.issue.user.login }} <${{ github.event.issue.use
               console.error('⚠️ Fehler beim Hinzufügen der Labels:', error);
             }
 
-  # Fehlerbehandlung
   handle-failure:
     if: failure()
     needs: unlock-challenge
@@ -387,7 +346,6 @@ Co-authored-by: ${{ github.event.issue.user.login }} <${{ github.event.issue.use
               🤖 *Fehlerbehandlung - Manuelle Aktion erforderlich*`
             });
             
-            // Fehler-Labels hinzufügen
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
