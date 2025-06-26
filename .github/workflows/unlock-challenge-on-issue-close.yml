@@ -287,6 +287,214 @@ jobs:
           
           if [[ "${{ steps.release.outputs.success }}" == "true" ]]; then
             echo "- **Status:** ✅ Challenge successfully released" >> $GITHUB_STEP_SUMMARY
+            echo "- **Challenge Title:** ${{ steps.release.outputs.challenge_title }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Released At:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
           else
             echo "- **Status:** ❌ Manual intervention required" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Issue Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Title:** ${{ github.event.issue.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Closed by:** ${{ github.event.issue.closed_by.login }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Closed at:** ${{ github.event.issue.closed_at }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** ${{ github.event.issue.html_url }}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: 📢 Notify Success via Discord/Slack (Optional)
+        if: steps.release.outputs.success == 'true' && secrets.DISCORD_WEBHOOK_URL != ''
+        run: |
+          # Optional: Discord/Slack Benachrichtigung
+          CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
+          CHALLENGE_TITLE="${{ steps.release.outputs.challenge_title }}"
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d '{
+              "embeds": [{
+                "title": "🔓 Challenge automatisch freigegeben",
+                "description": "Eine Challenge wurde nach Issue-Schließung automatisch wieder verfügbar gemacht.",
+                "color": 3066993,
+                "fields": [
+                  {
+                    "name": "🎯 Challenge",
+                    "value": "'$CHALLENGE_TITLE' (`'$CHALLENGE_ID'`)",
+                    "inline": false
+                  },
+                  {
+                    "name": "📝 Issue",
+                    "value": "[#'$ISSUE_NUMBER'](${{ github.event.issue.html_url }})",
+                    "inline": true
+                  },
+                  {
+                    "name": "⏰ Zeitpunkt",
+                    "value": "'$(date -u +%Y-%m-%d\ %H:%M:%S)' UTC",
+                    "inline": true
+                  }
+                ],
+                "footer": {
+                  "text": "GitHub Actions • ${{ github.repository }}"
+                }
+              }]
+            }' \
+            "${{ secrets.DISCORD_WEBHOOK_URL }}" || echo "Discord notification failed (optional)"
+      
+      - name: 🔍 Validate Challenge Structure
+        if: steps.release.outputs.success == 'true'
+        run: |
+          CHALLENGE_FOLDER="${{ steps.extract-challenge.outputs.challenge_folder }}"
+          CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
+          
+          echo "🔍 Validating challenge structure for: $CHALLENGE_ID"
+          
+          # Prüfe erforderliche Dateien
+          REQUIRED_FILES=("challenge.json" "README.md")
+          MISSING_FILES=()
+          
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [[ ! -f "$CHALLENGE_FOLDER/$file" ]]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          # Language-spezifische Dateien prüfen
+          LANGUAGE=$(jq -r '.language' "$CHALLENGE_FOLDER/challenge.json")
+          case "$LANGUAGE" in
+            "csharp")
+              EXPECTED_FILES=("starter.cs" "tests.cs" "TestRunner.cs")
+              ;;
+            "javascript")
+              EXPECTED_FILES=("starter.js" "tests.js" "package.json")
+              ;;
+            "python")
+              EXPECTED_FILES=("starter.py" "tests.py")
+              ;;
+            "java")
+              EXPECTED_FILES=("starter.java" "tests.java" "TestRunner.java")
+              ;;
+            "cpp")
+              # Header-basierte Struktur
+              MAIN_CLASS=$(jq -r '.mainClassName' "$CHALLENGE_FOLDER/challenge.json")
+              EXPECTED_FILES=("${MAIN_CLASS}.h" "Tests.h" "test_runner.cpp" "Makefile")
+              ;;
+            "c")
+              EXPECTED_FILES=("starter.c" "tests.c" "test_runner.c" "Makefile")
+              ;;
+            *)
+              EXPECTED_FILES=()
+              ;;
+          esac
+          
+          for file in "${EXPECTED_FILES[@]}"; do
+            if [[ ! -f "$CHALLENGE_FOLDER/$file" ]]; then
+              MISSING_FILES+=("$file")
+            fi
+          done
+          
+          # Validierungsergebnis
+          if [[ ${#MISSING_FILES[@]} -eq 0 ]]; then
+            echo "✅ Challenge structure validation passed"
+            echo "validation_passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Challenge structure validation found issues:"
+            printf '   Missing: %s\n' "${MISSING_FILES[@]}"
+            echo "validation_passed=false" >> $GITHUB_OUTPUT
+            echo "missing_files=${MISSING_FILES[*]}" >> $GITHUB_OUTPUT
+          fi
+          
+          # Challenge JSON Schema validieren
+          echo "🔍 Validating challenge.json schema..."
+          REQUIRED_FIELDS=("id" "title" "description" "language" "difficulty" "status")
+          INVALID_FIELDS=()
+          
+          for field in "${REQUIRED_FIELDS[@]}"; do
+            VALUE=$(jq -r ".$field // empty" "$CHALLENGE_FOLDER/challenge.json")
+            if [[ -z "$VALUE" || "$VALUE" == "null" ]]; then
+              INVALID_FIELDS+=("$field")
+            fi
+          done
+          
+          if [[ ${#INVALID_FIELDS[@]} -eq 0 ]]; then
+            echo "✅ challenge.json schema validation passed"
+          else
+            echo "⚠️ challenge.json schema validation failed:"
+            printf '   Missing/invalid field: %s\n' "${INVALID_FIELDS[@]}"
+          fi
+      
+      - name: 📋 Create Release Summary Comment
+        if: steps.release.outputs.success == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const challengeId = '${{ steps.extract-challenge.outputs.challenge_id }}';
+            const challengeTitle = '${{ steps.release.outputs.challenge_title }}';
+            const validationPassed = '${{ steps.validate-challenge-structure.outputs.validation_passed }}' === 'true';
+            const missingFiles = '${{ steps.validate-challenge-structure.outputs.missing_files }}';
+            
+            let body = `## 📊 Release Summary
+            
+            ### ✅ Erfolgreich verarbeitete Challenge
+            - **ID:** \`${challengeId}\`
+            - **Titel:** ${challengeTitle}
+            - **Status:** Freigegeben und verfügbar ✅
+            
+            ### 🔍 Validierung
+            `;
+            
+            if (validationPassed) {
+              body += `- **Struktur:** ✅ Vollständig
+            - **Schema:** ✅ Gültig
+            - **Dateien:** ✅ Alle erforderlichen Dateien vorhanden`;
+            } else {
+              body += `- **Struktur:** ⚠️ Probleme erkannt
+            - **Fehlende Dateien:** \`${missingFiles}\`
+            - **Empfehlung:** Challenge-Struktur manuell prüfen`;
+            }
+            
+            body += `
+            
+            ### 🎯 Benutzer-Verfügbarkeit
+            Die Challenge ist jetzt verfügbar in:
+            - VS Code Extension Challenge-Browser
+            - GitHub Repository Challenge-Liste
+            - Alle Standard-Challenge-Workflows
+            
+            ### 🔗 Nützliche Links
+            - [Challenge-Ordner](https://github.com/${{ github.repository }}/tree/main/challenges/${challengeId})
+            - [Challenge JSON](https://github.com/${{ github.repository }}/blob/main/challenges/${challengeId}/challenge.json)
+            - [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            ---
+            🤖 *Automatische Freigabe durch GitHub Actions abgeschlossen*`;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+      
+      - name: 🧹 Cleanup and Finalize
+        if: always()
+        run: |
+          echo "🧹 Performing cleanup operations..."
+          
+          # Backup-Dateien entfernen (falls vorhanden)
+          find challenges/ -name "*.backup" -type f -delete 2>/dev/null || true
+          find challenges/ -name "*.tmp" -type f -delete 2>/dev/null || true
+          
+          # Workflow-Status loggen
+          echo "📊 Final workflow status:"
+          echo "  - Challenge ID: ${{ steps.extract-challenge.outputs.challenge_id || 'Not found' }}"
+          echo "  - Release Success: ${{ steps.release.outputs.success || 'false' }}"
+          echo "  - Validation: ${{ steps.validate-challenge-structure.outputs.validation_passed || 'not run' }}"
+          echo "  - Match Method: ${{ steps.extract-challenge.outputs.match_method || 'none' }}"
+          
+          # Erfolgs-/Fehler-Status für weitere Workflows setzen
+          if [[ "${{ steps.release.outputs.success }}" == "true" ]]; then
+            echo "✅ Workflow completed successfully"
+            exit 0
+          else
+            echo "❌ Workflow completed with manual intervention required"
+            exit 0  # Nicht als Fehler markieren, da es ein erwartetes Szenario ist
           fi
