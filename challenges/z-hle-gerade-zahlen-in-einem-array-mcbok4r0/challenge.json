@@ -14,11 +14,14 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-25T08:16:16.478Z",
-  "status": "approved",
+  "status": "reported",
   "starterCode": "using System;\n\npublic static class Solution {\n    public static int CountEvenNumbers(int[] numbers) {\n        // TODO: Implementiere die Logik zur Zählung gerader Zahlen\n        return 0;\n    }\n\n    public static void Main() {\n        // Optional: Zum Testen\n    }\n}",
   "solution": "using System;\n\npublic static class Solution {\n    public static int CountEvenNumbers(int[] numbers) {\n        int count = 0;\n        foreach (int num in numbers) {\n            if (num % 2 == 0) {\n                count++;\n            }\n        }\n        return count;\n    }\n\n    public static void Main() {\n        int[] test1 = { 1, 2, 3, 4, 5, 6 };\n        int[] test2 = { 7, 9, 13 };\n        int[] test3 = { 2, 4, 6, 8 };\n\n        Console.WriteLine(CountEvenNumbers(test1)); // Ausgabe: 3\n        Console.WriteLine(CountEvenNumbers(test2)); // Ausgabe: 0\n        Console.WriteLine(CountEvenNumbers(test3)); // Ausgabe: 4\n    }\n}",
   "tests": "using System;\nusing System.Diagnostics;\n\npublic static class Tests {\n    public static void RunTests() {\n        Debug.Assert(Solution.CountEvenNumbers(new int[] { 1, 2, 3, 4, 5, 6 }) == 3);\n        Debug.Assert(Solution.CountEvenNumbers(new int[] { 7, 9, 13 }) == 0);\n        Debug.Assert(Solution.CountEvenNumbers(new int[] { 2, 4, 6, 8 }) == 4);\n        Debug.Assert(Solution.CountEvenNumbers(new int[] { }) == 0);\n        Debug.Assert(Solution.CountEvenNumbers(new int[] { 0, -2, -4 }) == 3);\n\n        Console.WriteLine(\"Alle Tests erfolgreich bestanden.\");\n    }\n\n    public static void Main() {\n        RunTests();\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "ZhleGeradeZahlenInEinemArray",
-  "functionName": "ZhleGeradeZahlenInEinemArray"
+  "functionName": "ZhleGeradeZahlenInEinemArray",
+  "reportedIssueNumber": 69,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/69",
+  "isHidden": true
 }
