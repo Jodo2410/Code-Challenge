@@ -1,23 +1,22 @@
-name: 🔓 Unlock Challenge bei Issue-Schließung
+name: 🔓 Universal Challenge Unlock
 
 on:
   issues:
     types: [closed]
 
-# ✅ FIX: Token-Permissions explizit setzen
 permissions:
   issues: write
   contents: write
-  pull-requests: write
 
 jobs:
   unlock-challenge:
-    # Robuste Trigger-Bedingungen (mehrere Fallbacks)
+    # Trigger nur bei Challenge Error Reports
     if: |
       contains(github.event.issue.labels.*.name, 'challenge-error') ||
       contains(github.event.issue.title, 'Challenge Error Report') ||
       contains(github.event.issue.body, '🚨 Challenge Error Report') ||
       contains(github.event.issue.body, '**ID:**')
+    
     runs-on: ubuntu-latest
     
     steps:
@@ -27,289 +26,305 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
       
-      - name: 🔍 Debug Issue Information
+      - name: 🔍 Challenge-ID Universal Extraktion
+        id: extract_id
         run: |
-          echo "🔍 DEBUG: Issue-Informationen"
-          echo "Issue Nummer: ${{ github.event.issue.number }}"
-          echo "Issue Titel: ${{ github.event.issue.title }}"
-          echo "Issue State: ${{ github.event.issue.state }}"
-          echo "Issue Action: ${{ github.event.action }}"
-          echo ""
-          echo "📋 Issue Labels:"
-          echo '${{ toJSON(github.event.issue.labels) }}' | jq -r '.[].name' 2>/dev/null || echo "Keine Labels oder jq fehlt"
-          echo ""
-          echo "📄 Issue Body (erste 1000 Zeichen):"
-          echo "${{ github.event.issue.body }}" | head -c 1000
-          echo ""
-      
-      - name: 🔍 Challenge-ID aus Issue extrahieren (Robust)
-        id: extract
-        run: |
-          echo "📄 Robust Challenge-ID Extraktion..."
+          echo "🔍 Starte universelle Challenge-ID Extraktion..."
           
-          # Issue-Body sicher in Variable speichern
+          # Issue-Body sicher in Variable laden
           ISSUE_BODY='${{ github.event.issue.body }}'
           
-          echo "🔍 Teste verschiedene Extraktions-Methoden..."
+          echo "📄 Issue-Body Länge: ${#ISSUE_BODY} Zeichen"
           
-          # Methode 1: **ID:** pattern (häufigster Fall)
-          ID=$(echo "$ISSUE_BODY" | grep -oE '\*\*ID:\*\*[[:space:]]*[a-zA-Z0-9_-]+' | sed 's/.*\*\*ID:\*\*[[:space:]]*//' | head -1 | xargs || echo "")
-          echo "Test 1 (**ID:** pattern): '$ID'"
+          # Methode 1: **ID:** Pattern (Standard Format)
+          echo "🧪 Methode 1: **ID:** Pattern"
+          ID1=$(echo "$ISSUE_BODY" | grep -oE '\*\*ID:\*\*[[:space:]]*[a-zA-Z0-9._-]+' | sed 's/.*\*\*ID:\*\*[[:space:]]*//' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
+          echo "   Gefunden: '$ID1'"
           
-          # Methode 2: Falls Methode 1 fehlschlägt - suche nach ID: ohne Markdown
-          if [ -z "$ID" ]; then
-            ID=$(echo "$ISSUE_BODY" | grep -E '^ID:' | cut -d ':' -f2 | xargs || echo "")
-            echo "Test 2 (ID: pattern): '$ID'"
+          # Methode 2: ID: Pattern (ohne Markdown)
+          echo "🧪 Methode 2: ID: Pattern"
+          ID2=$(echo "$ISSUE_BODY" | grep -E '^[[:space:]]*ID:[[:space:]]*[a-zA-Z0-9._-]+' | sed 's/.*ID:[[:space:]]*//' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
+          echo "   Gefunden: '$ID2'"
+          
+          # Methode 3: mcbt Pattern (Challenge-ID Format)
+          echo "🧪 Methode 3: mcbt Pattern"
+          ID3=$(echo "$ISSUE_BODY" | grep -oE '[a-zA-Z0-9-]+mcbt[a-zA-Z0-9]+' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
+          echo "   Gefunden: '$ID3'"
+          
+          # Methode 4: Generisches Challenge-ID Pattern (mit Bindestrichen)
+          echo "🧪 Methode 4: Generic Challenge Pattern"
+          ID4=$(echo "$ISSUE_BODY" | grep -oE '[a-z][a-z0-9-]{10,50}[a-z0-9]' | grep -E '.*-.*-.*' | head -1 | tr -d ' \t\n\r' 2>/dev/null || echo "")
+          echo "   Gefunden: '$ID4'"
+          
+          # Methode 5: Suche nach allem zwischen Anführungszeichen nach "ID"
+          echo "🧪 Methode 5: Quoted ID Pattern"
+          ID5=$(echo "$ISSUE_BODY" | grep -oE 'ID[[:space:]]*[:\"]\*\*[[:space:]]*[a-zA-Z0-9._-]+' | sed 's/.*[[:space:]]//' | tr -d '"*: \t\n\r' 2>/dev/null || echo "")
+          echo "   Gefunden: '$ID5'"
+          
+          # Bestimme die beste ID
+          FINAL_ID=""
+          
+          # Priorität: ID1 > ID3 > ID2 > ID4 > ID5
+          if [ -n "$ID1" ]; then
+            FINAL_ID="$ID1"
+            echo "✅ Verwende ID aus Methode 1: $FINAL_ID"
+          elif [ -n "$ID3" ]; then
+            FINAL_ID="$ID3"
+            echo "✅ Verwende ID aus Methode 3: $FINAL_ID"
+          elif [ -n "$ID2" ]; then
+            FINAL_ID="$ID2"
+            echo "✅ Verwende ID aus Methode 2: $FINAL_ID"
+          elif [ -n "$ID4" ]; then
+            FINAL_ID="$ID4"
+            echo "✅ Verwende ID aus Methode 4: $FINAL_ID"
+          elif [ -n "$ID5" ]; then
+            FINAL_ID="$ID5"
+            echo "✅ Verwende ID aus Methode 5: $FINAL_ID"
           fi
           
-          # Methode 3: Regex mit grep -P (falls verfügbar)
-          if [ -z "$ID" ]; then
-            ID=$(echo "$ISSUE_BODY" | grep -oP '\*\*ID:\*\*\s*\K[a-zA-Z0-9_-]+' 2>/dev/null | head -1 || echo "")
-            echo "Test 3 (grep -P): '$ID'"
-          fi
-          
-          # Methode 4: Suche nach challenge-id pattern überall im Text
-          if [ -z "$ID" ]; then
-            ID=$(echo "$ISSUE_BODY" | grep -oE '[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9]+-[a-zA-Z0-9]+' | grep -E '.*-mcbt[0-9a-z]+' | head -1 || echo "")
-            echo "Test 4 (mcbt pattern): '$ID'"
-          fi
-          
-          # Methode 5: Letzter Fallback - manuell parsen
-          if [ -z "$ID" ]; then
-            echo "⚠️ Alle automatischen Methoden fehlgeschlagen"
-            echo "📋 Vollständiger Issue-Body für manuelle Analyse:"
-            echo "$ISSUE_BODY"
-            echo "📋 Challenge-ID manuell suchen..."
-            
-            # Versuche alles was wie eine Challenge-ID aussieht
-            ID=$(echo "$ISSUE_BODY" | grep -oE '[a-z]+-[a-z0-9-]+-mcbt[a-z0-9]+' | head -1 || echo "")
-            echo "Test 5 (manuell): '$ID'"
-          fi
-          
-          # Validierung der gefundenen ID
-          if [ -n "$ID" ]; then
-            echo "✅ Challenge-ID erfolgreich extrahiert: '$ID'"
-            
-            # Prüfe ob ID das erwartete Format hat
-            if echo "$ID" | grep -qE '^[a-zA-Z0-9]+-.*-mcbt[a-zA-Z0-9]+$'; then
-              echo "✅ ID-Format validiert (enthält mcbt)"
-            else
-              echo "⚠️ Unerwartetes ID-Format, aber versuche trotzdem"
-            fi
-            
-            echo "challenge_id=$ID" >> $GITHUB_OUTPUT
-          else
+          # Validierung
+          if [ -z "$FINAL_ID" ]; then
             echo "❌ Keine Challenge-ID gefunden!"
             echo ""
-            echo "🔍 DEBUG: Issue-Body zur manuellen Prüfung:"
-            echo "=============================="
-            echo "$ISSUE_BODY"
-            echo "=============================="
+            echo "🔍 Debug: Issue-Body Inhalt (erste 500 Zeichen):"
+            echo "$ISSUE_BODY" | head -c 500
             echo ""
-            echo "💡 Erwartetes Format: **ID:** your-challenge-id-here"
+            echo "💡 Erwartete Formate:"
+            echo "   - **ID:** challenge-id-hier"
+            echo "   - ID: challenge-id-hier"
+            echo "   - Beliebiger Text mit challenge-id-mcbtXXXX"
             exit 1
           fi
+          
+          # ID bereinigen (für Sicherheit)
+          CLEAN_ID=$(echo "$FINAL_ID" | tr -cd 'a-zA-Z0-9._-')
+          
+          if [ "$CLEAN_ID" != "$FINAL_ID" ]; then
+            echo "⚠️ ID bereinigt: '$FINAL_ID' → '$CLEAN_ID'"
+            FINAL_ID="$CLEAN_ID"
+          fi
+          
+          echo "🎯 Finale Challenge-ID: $FINAL_ID"
+          echo "challenge_id=$FINAL_ID" >> $GITHUB_OUTPUT
       
-      - name: ✅ Prüfe ob Challenge existiert
-        id: check
+      - name: ✅ Challenge-Existenz prüfen
+        id: validate
         run: |
-          ID=${{ steps.extract.outputs.challenge_id }}
+          ID=${{ steps.extract_id.outputs.challenge_id }}
           CHALLENGE_DIR="challenges/$ID"
           CONFIG_FILE="$CHALLENGE_DIR/challenge.json"
           
-          echo "🔍 Prüfe Challenge-Existenz für ID: $ID"
+          echo "🔍 Prüfe Challenge-Existenz..."
           echo "📁 Challenge-Verzeichnis: $CHALLENGE_DIR"
           echo "📄 Config-Datei: $CONFIG_FILE"
           
+          # Prüfe ob Challenges-Ordner existiert
+          if [ ! -d "challenges" ]; then
+            echo "❌ Challenges-Hauptordner existiert nicht!"
+            echo "📁 Repository-Struktur:"
+            ls -la
+            exit 1
+          fi
+          
+          # Prüfe ob Challenge-Ordner existiert
           if [ ! -d "$CHALLENGE_DIR" ]; then
             echo "❌ Challenge-Ordner nicht gefunden: $CHALLENGE_DIR"
-            echo "📁 Verfügbare Challenges:"
-            ls -la challenges/ 2>/dev/null || echo "Challenges-Ordner existiert nicht"
+            echo ""
+            echo "📁 Verfügbare Challenges (erste 10):"
+            find challenges/ -maxdepth 1 -type d -name "*" | head -10 || echo "Keine Challenge-Ordner gefunden"
+            echo ""
+            echo "🔍 Suche nach ähnlichen IDs:"
+            find challenges/ -maxdepth 1 -type d -name "*${ID:0:10}*" 2>/dev/null || echo "Keine ähnlichen IDs gefunden"
             exit 1
           fi
           
+          # Prüfe ob Config-Datei existiert
           if [ ! -f "$CONFIG_FILE" ]; then
             echo "❌ Challenge-Konfiguration nicht gefunden: $CONFIG_FILE"
+            echo ""
             echo "📁 Ordner-Inhalt:"
-            ls -la "$CHALLENGE_DIR"
+            ls -la "$CHALLENGE_DIR/"
             exit 1
           fi
           
-          echo "✅ Challenge existiert: $CONFIG_FILE"
+          echo "✅ Challenge existiert und ist gültig"
           
-          # Aktueller Status prüfen (mit jq fallback)
+          # Aktuellen Status auslesen (falls möglich)
           if command -v jq >/dev/null 2>&1; then
-            CURRENT_STATUS=$(jq -r '.status // "unknown"' "$CONFIG_FILE")
+            CURRENT_STATUS=$(jq -r '.status // "unknown"' "$CONFIG_FILE" 2>/dev/null || echo "unknown")
             echo "📊 Aktueller Status: $CURRENT_STATUS"
             echo "current_status=$CURRENT_STATUS" >> $GITHUB_OUTPUT
           else
-            echo "⚠️ jq nicht verfügbar, überspringe Status-Check"
+            echo "ℹ️ jq nicht verfügbar - Status-Check übersprungen"
             echo "current_status=unknown" >> $GITHUB_OUTPUT
           fi
       
       - name: 🔧 Challenge-Status zurücksetzen
         run: |
-          ID=${{ steps.extract.outputs.challenge_id }}
+          ID=${{ steps.extract_id.outputs.challenge_id }}
           CONFIG_FILE="challenges/$ID/challenge.json"
           
-          echo "🛠️ Setze Challenge-Status zurück in: $CONFIG_FILE"
+          echo "🛠️ Setze Challenge-Status zurück..."
+          echo "📄 Datei: $CONFIG_FILE"
           
           # Backup erstellen
           cp "$CONFIG_FILE" "$CONFIG_FILE.backup"
-          echo "📋 Backup erstellt: $CONFIG_FILE.backup"
+          echo "💾 Backup erstellt: $CONFIG_FILE.backup"
           
-          # Status zurücksetzen - mit und ohne jq
+          # Status zurücksetzen mit sed (funktioniert ohne jq)
+          echo "🔧 Aktualisiere Status-Felder..."
+          
+          # Status auf approved setzen
+          sed -i 's/"status"[[:space:]]*:[[:space:]]*"[^"]*"/"status": "approved"/g' "$CONFIG_FILE"
+          
+          # Fehler-Flags entfernen/zurücksetzen
+          sed -i 's/"hasErrors"[[:space:]]*:[[:space:]]*true/"hasErrors": false/g' "$CONFIG_FILE"
+          sed -i 's/"isHidden"[[:space:]]*:[[:space:]]*true/"isHidden": false/g' "$CONFIG_FILE"
+          
+          # Gemeldete Issue-Referenzen entfernen
+          sed -i '/"reportedIssueNumber"/d' "$CONFIG_FILE"
+          sed -i '/"reportedIssueUrl"/d' "$CONFIG_FILE"
+          sed -i '/"errorReport"/d' "$CONFIG_FILE"
+          
+          # Zusätzliche Bereinigung für mögliche andere Status-Werte
+          sed -i 's/"status"[[:space:]]*:[[:space:]]*"reported"/"status": "approved"/g' "$CONFIG_FILE"
+          sed -i 's/"status"[[:space:]]*:[[:space:]]*"pending"/"status": "approved"/g' "$CONFIG_FILE"
+          sed -i 's/"status"[[:space:]]*:[[:space:]]*"rejected"/"status": "approved"/g' "$CONFIG_FILE"
+          
+          echo "✅ Status-Update abgeschlossen"
+          
+          # Validierung (falls jq verfügbar)
           if command -v jq >/dev/null 2>&1; then
-            echo "🔧 Verwende jq für Status-Update"
-            jq '
-              .status = "approved" |
-              .hasErrors = false |
-              .isHidden = false |
-              del(.reportedIssueNumber) |
-              del(.reportedIssueUrl) |
-              del(.errorReport) |
-              .lastUpdated = now | strftime("%Y-%m-%dT%H:%M:%SZ")
-            ' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-          else
-            echo "🔧 Verwende sed für Status-Update (jq nicht verfügbar)"
-            # Einfaches sed-basiertes Update als Fallback
-            sed -i 's/"status"[[:space:]]*:[[:space:]]*"[^"]*"/"status": "approved"/g' "$CONFIG_FILE"
-            sed -i 's/"hasErrors"[[:space:]]*:[[:space:]]*true/"hasErrors": false/g' "$CONFIG_FILE"
-            sed -i 's/"isHidden"[[:space:]]*:[[:space:]]*true/"isHidden": false/g' "$CONFIG_FILE"
+            if jq . "$CONFIG_FILE" >/dev/null 2>&1; then
+              NEW_STATUS=$(jq -r '.status' "$CONFIG_FILE" 2>/dev/null || echo "unknown")
+              echo "📊 Neuer Status: $NEW_STATUS"
+            else
+              echo "⚠️ JSON-Validation fehlgeschlagen - verwende Backup"
+              mv "$CONFIG_FILE.backup" "$CONFIG_FILE"
+              exit 1
+            fi
           fi
           
-          echo "✅ Challenge-Status aktualisiert"
-          echo "📋 Neue Datei-Größe: $(wc -c < "$CONFIG_FILE") bytes"
+          echo "📄 Neue Dateigröße: $(wc -c < "$CONFIG_FILE") bytes"
       
-      - name: 📝 Error-Report als gelöst markieren (optional)
+      - name: 📝 Error-Report aktualisieren (optional)
         run: |
-          ID=${{ steps.extract.outputs.challenge_id }}
+          ID=${{ steps.extract_id.outputs.challenge_id }}
           ERROR_FILE="challenges/$ID/error-report.json"
           
           if [ -f "$ERROR_FILE" ]; then
-            echo "📝 Markiere Error-Report als gelöst: $ERROR_FILE"
+            echo "📝 Aktualisiere Error-Report: $ERROR_FILE"
             
+            # Einfache sed-basierte Aktualisierung
+            sed -i 's/"isResolved"[[:space:]]*:[[:space:]]*false/"isResolved": true/g' "$ERROR_FILE"
+            
+            # Falls jq verfügbar, erweiterte Aktualisierung
             if command -v jq >/dev/null 2>&1; then
-              jq '
+              TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+              jq --arg timestamp "$TIMESTAMP" --argjson issue "${{ github.event.issue.number }}" '
                 .isResolved = true |
-                .resolvedAt = now | strftime("%Y-%m-%dT%H:%M:%SZ") |
+                .resolvedAt = $timestamp |
                 .resolvedBy = "github-action" |
-                .resolvedIssue = ${{ github.event.issue.number }}
+                .resolvedIssue = $issue
               ' "$ERROR_FILE" > "$ERROR_FILE.tmp" && mv "$ERROR_FILE.tmp" "$ERROR_FILE"
               echo "✅ Error-Report mit jq aktualisiert"
             else
-              echo "ℹ️ jq nicht verfügbar, überspringe Error-Report Update"
+              echo "ℹ️ Error-Report mit sed aktualisiert"
             fi
           else
-            echo "ℹ️ Kein Error-Report gefunden ($ERROR_FILE)"
+            echo "ℹ️ Kein Error-Report gefunden: $ERROR_FILE"
           fi
       
-      - name: 🎯 Git-Konfiguration setzen
+      - name: 💾 Git-Konfiguration und Commit
         run: |
-          git config user.name "Challenge-Unlock-Bot"
-          git config user.email "action@github.com"
-      
-      - name: 💾 Änderungen committen und pushen
-        run: |
-          ID=${{ steps.extract.outputs.challenge_id }}
+          ID=${{ steps.extract_id.outputs.challenge_id }}
           
-          # Status prüfen
+          # Git konfigurieren
+          git config user.name "challenge-unlock-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          echo "🔍 Prüfe auf Änderungen..."
+          
           if git diff --quiet; then
             echo "ℹ️ Keine Änderungen zu committen"
           else
-            echo "📝 Committe Änderungen..."
+            echo "📝 Committen der Änderungen..."
             
-            # Änderungen hinzufügen
+            # Nur die Challenge-Dateien hinzufügen
             git add "challenges/$ID/"
             
-            # Commit erstellen
-            git commit -m "🔓 Unlock Challenge '$ID' nach Issue-Schließung
+            # Commit mit aussagekräftiger Nachricht
+            git commit -m "🔓 Challenge automatisch entsperrt: $ID
+
+Entsperrt nach Issue-Schließung #${{ github.event.issue.number }}
+✅ Status: approved
+🗓️ Entsperrt: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+🤖 Automatisch durch GitHub Actions
+
+Co-authored-by: ${{ github.event.issue.user.login }} <${{ github.event.issue.user.id }}+${{ github.event.issue.user.login }}@users.noreply.github.com>"
             
-            ✅ Challenge wieder freigegeben nach Issue #${{ github.event.issue.number }}
-            📋 Status: approved
-            🗓️ Freigegeben: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-            🤖 Automatisch durch GitHub Action"
+            echo "📤 Push der Änderungen..."
+            git push origin main
             
-            echo "✅ Änderungen committet"
-            
-            # Push versuchen
-            echo "📤 Pushe Änderungen..."
-            if git push origin main; then
-              echo "✅ Änderungen erfolgreich gepusht"
-            else
-              echo "❌ Push fehlgeschlagen, versuche mit force"
-              git push --force-with-lease origin main
-            fi
+            echo "✅ Challenge $ID erfolgreich entsperrt und gepusht"
           fi
       
       - name: 💬 Erfolgs-Kommentar hinzufügen
         uses: actions/github-script@v7
         with:
           script: |
-            const challengeId = '${{ steps.extract.outputs.challenge_id }}';
-            const currentStatus = '${{ steps.check.outputs.current_status }}';
+            const challengeId = '${{ steps.extract_id.outputs.challenge_id }}';
+            const currentStatus = '${{ steps.validate.outputs.current_status }}' || 'unknown';
             
-            try {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: `## ✅ Challenge automatisch freigegeben!
-                
-                **Challenge-ID:** \`${challengeId}\`
-                **Vorheriger Status:** \`${currentStatus}\`
-                **Neuer Status:** \`approved\`
-                
-                ### 🎉 Was passiert ist:
-                - ✅ Challenge-Status wurde auf \`approved\` zurückgesetzt
-                - 🔓 Challenge ist wieder für Benutzer sichtbar
-                - 📝 Error-Report als gelöst markiert
-                - 🗑️ Fehler-Flags entfernt
-                
-                ### 🚀 Nächste Schritte:
-                Die Challenge \`${challengeId}\` ist jetzt wieder verfügbar und kann in der VS Code Extension geladen werden.
-                
-                ---
-                🤖 *Automatisch ausgeführt durch GitHub Action*`
-              });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ✅ Challenge automatisch entsperrt!
               
-              console.log('✅ Erfolgs-Kommentar hinzugefügt');
-            } catch (error) {
-              console.error('❌ Fehler beim Hinzufügen des Kommentars:', error);
-              // Fehler nicht weiterwerfen, da Haupt-Task erfolgreich war
-            }
+              **🎯 Challenge-ID:** \`${challengeId}\`  
+              **📊 Vorheriger Status:** \`${currentStatus}\`  
+              **📊 Neuer Status:** \`approved\`  
+              **🕒 Entsperrt:** ${new Date().toLocaleString('de-DE', {timeZone: 'Europe/Berlin'})}
+              
+              ### 🎉 Was ist passiert:
+              - ✅ Challenge-Status wurde auf \`approved\` zurückgesetzt
+              - 🔓 Challenge ist wieder für alle Benutzer sichtbar  
+              - 📝 Error-Report als gelöst markiert
+              - 🗑️ Fehler-Flags und Issue-Referenzen entfernt
+              
+              ### 🚀 Nächste Schritte:
+              Die Challenge \`${challengeId}\` ist jetzt wieder verfügbar und kann in der **VS Code Coding Challenges Extension** geladen werden.
+              
+              ---
+              🤖 *Automatisch entsperrt durch GitHub Actions*`
+            });
+            
+            console.log('✅ Erfolgs-Kommentar hinzugefügt');
       
-      - name: 🏷️ Issue-Labels aktualisieren  
+      - name: 🏷️ Issue-Labels aktualisieren
         uses: actions/github-script@v7
         with:
           script: |
             try {
-              // 'resolved' Label hinzufügen
+              // Labels hinzufügen
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                labels: ['resolved', 'auto-fixed']
+                labels: ['resolved', 'auto-unlocked', 'challenge-restored']
               });
               
-              console.log('✅ Labels hinzugefügt: resolved, auto-fixed');
+              console.log('✅ Labels hinzugefügt: resolved, auto-unlocked, challenge-restored');
             } catch (error) {
-              console.error('❌ Fehler beim Hinzufügen der Labels:', error);
-              // Fehler nicht weiterwerfen, da Haupt-Task erfolgreich war
+              console.error('⚠️ Fehler beim Hinzufügen der Labels:', error);
             }
 
-  # ✅ FIX: Verbesserter Fehlerbehandlungs-Job
+  # Fehlerbehandlung
   handle-failure:
-    if: |
-      failure() && (
-        contains(github.event.issue.labels.*.name, 'challenge-error') ||
-        contains(github.event.issue.title, 'Challenge Error Report') ||
-        contains(github.event.issue.body, '🚨 Challenge Error Report')
-      )
-    runs-on: ubuntu-latest
+    if: failure()
     needs: unlock-challenge
-    
-    # ✅ FIX: Explizite Permissions für Fehlerbehandlung
+    runs-on: ubuntu-latest
     permissions:
       issues: write
     
@@ -318,46 +333,66 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            try {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: `## ❌ Automatische Challenge-Freigabe fehlgeschlagen
-                
-                Der Versuch, diese Challenge automatisch freizugeben, ist fehlgeschlagen.
-                
-                ### 🛠️ Manuelle Schritte erforderlich:
-                1. **Challenge-ID extrahieren:** Suche nach \`**ID:** challenge-id-hier\` im Issue-Body
-                2. **Datei bearbeiten:** Öffne \`challenges/{challenge-id}/challenge.json\`
-                3. **Status setzen:** Ändere \`"status": "reported"\` zu \`"status": "approved"\`
-                4. **Flags entfernen:** Lösche \`hasErrors\`, \`isHidden\`, \`reportedIssueNumber\`, \`reportedIssueUrl\`
-                5. **Committen:** Speichere und pushe die Änderungen
-                
-                ### 🔍 Debugging-Info:
-                - **Issue:** #${context.issue.number}
-                - **Workflow-Run:** [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
-                - **Timestamp:** ${new Date().toISOString()}
-                - **Fehler-Typ:** Siehe Workflow-Log für Details
-                
-                ### 📋 Wahrscheinliche Ursachen:
-                - Challenge-ID konnte nicht aus Issue-Body extrahiert werden
-                - Challenge-Datei existiert nicht im erwarteten Pfad
-                - Git-Permission oder jq-Tool Problem
-                
-                ---
-                🤖 *Automatischer Fehlerkommentar - Manuelle Aktion erforderlich*`
-              });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ❌ Automatische Challenge-Entsperrung fehlgeschlagen
               
-              // 'manual-action-required' Label hinzufügen
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                labels: ['manual-action-required', 'auto-unlock-failed']
-              });
+              Der Versuch, die Challenge automatisch zu entsperren, ist fehlgeschlagen.
               
-              console.log('✅ Fehler-Kommentar und Labels hinzugefügt');
-            } catch (error) {
-              console.error('❌ Fehler beim Erstellen des Fehler-Kommentars:', error);
-            }
+              ### 🛠️ Manuelle Schritte erforderlich:
+              
+              #### 1. Challenge-ID finden
+              Suche im Issue-Body nach der Challenge-ID (Format: \`**ID:** challenge-id-hier\`)
+              
+              #### 2. Datei bearbeiten
+              Öffne die Datei: \`challenges/{challenge-id}/challenge.json\`
+              
+              #### 3. Status ändern
+              Ändere folgende Werte:
+              \`\`\`json
+              {
+                "status": "approved",
+                "hasErrors": false,
+                "isHidden": false
+              }
+              \`\`\`
+              
+              #### 4. Referenzen entfernen
+              Lösche diese Zeilen (falls vorhanden):
+              \`\`\`json
+              "reportedIssueNumber": ${context.issue.number},
+              "reportedIssueUrl": "...",
+              "errorReport": { ... }
+              \`\`\`
+              
+              #### 5. Speichern
+              Committe und pushe die Änderungen
+              
+              ### 🔍 Debugging-Informationen:
+              - **Issue:** #${context.issue.number}
+              - **Workflow-Run:** [${context.runId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              - **Fehler-Zeit:** ${new Date().toISOString()}
+              
+              ### 📋 Häufige Ursachen:
+              - Challenge-ID konnte nicht aus Issue-Body extrahiert werden
+              - Challenge-Ordner existiert nicht im Repository
+              - Datei-Permissions oder Git-Fehler
+              - JSON-Format ungültig
+              
+              **💡 Tipp:** Prüfe die Workflow-Logs für detaillierte Fehlermeldungen.
+              
+              ---
+              🤖 *Fehlerbehandlung - Manuelle Aktion erforderlich*`
+            });
+            
+            // Fehler-Labels hinzufügen
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['manual-unlock-required', 'auto-unlock-failed']
+            });
+            
+            console.log('✅ Fehler-Kommentar und Labels hinzugefügt');
