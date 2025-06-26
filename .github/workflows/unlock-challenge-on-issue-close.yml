@@ -6,8 +6,12 @@ on:
 
 jobs:
   unlock-challenge:
-    # Nur ausführen wenn Issue das Label 'challenge-error' hat
-    if: contains(github.event.issue.labels.*.name, 'challenge-error')
+    # Nur ausführen wenn Issue ein Challenge Error Report ist (mehrere mögliche Labels/Bedingungen)
+    if: |
+      contains(github.event.issue.labels.*.name, 'challenge-error') ||
+      contains(github.event.issue.title, 'Challenge Error Report') ||
+      contains(github.event.issue.body, '🚨 Challenge Error Report') ||
+      contains(github.event.issue.body, '**ID:**')
     runs-on: ubuntu-latest
     
     steps:
@@ -16,6 +20,21 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+      
+      - name: 🔍 Debug Issue Information
+        run: |
+          echo "🔍 DEBUG: Issue-Informationen"
+          echo "Issue Nummer: ${{ github.event.issue.number }}"
+          echo "Issue Titel: ${{ github.event.issue.title }}"
+          echo "Issue State: ${{ github.event.issue.state }}"
+          echo "Issue Action: ${{ github.event.action }}"
+          echo ""
+          echo "📋 Issue Labels:"
+          echo '${{ toJSON(github.event.issue.labels) }}' | jq -r '.[].name'
+          echo ""
+          echo "📄 Issue Body (erste 500 Zeichen):"
+          echo "${{ github.event.issue.body }}" | head -c 500
+          echo ""
       
       - name: 🔍 Challenge-ID aus Issue extrahieren
         id: extract
@@ -217,7 +236,12 @@ jobs:
 
   # Separater Job für Fehlerbehandlung
   handle-failure:
-    if: failure() && contains(github.event.issue.labels.*.name, 'challenge-error')
+    if: |
+      failure() && (
+        contains(github.event.issue.labels.*.name, 'challenge-error') ||
+        contains(github.event.issue.title, 'Challenge Error Report') ||
+        contains(github.event.issue.body, '🚨 Challenge Error Report')
+      )
     runs-on: ubuntu-latest
     needs: unlock-challenge
     
