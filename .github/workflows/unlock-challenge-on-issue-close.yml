@@ -300,8 +300,18 @@ jobs:
           echo "- **Closed at:** ${{ github.event.issue.closed_at }}" >> $GITHUB_STEP_SUMMARY
           echo "- **URL:** ${{ github.event.issue.html_url }}" >> $GITHUB_STEP_SUMMARY
       
+      - name: 🔍 Check Discord Webhook Secret
+        if: steps.release.outputs.success == 'true'
+        id: check-discord-secret
+        run: |
+          if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
+            echo "discord_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "discord_available=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: 📢 Notify Success via Discord/Slack (Optional)
-        if: steps.release.outputs.success == 'true' && secrets.DISCORD_WEBHOOK_URL != ''
+        if: steps.release.outputs.success == 'true' && steps.check-discord-secret.outputs.discord_available == 'true'
         run: |
           # Optional: Discord/Slack Benachrichtigung
           CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
