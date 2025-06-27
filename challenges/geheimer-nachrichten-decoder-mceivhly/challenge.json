@@ -1,0 +1,26 @@
+{
+  "id": "geheimer-nachrichten-decoder-mceivhly",
+  "title": "Geheimer Nachrichten-Decoder",
+  "description": "### Einführung:\nEin Geheimbund hat eine Nachricht verschlüsselt. Die Verschlüsselung basiert auf einer einfachen **Caesar-Verschiebung**, bei der jeder Buchstabe im Alphabet um eine bestimmte Anzahl an Positionen nach links oder rechts verschoben wurde.\n\nBeispiel:\n- Eingabe: \"D\", Verschiebung: -3 → Ausgabe: \"A\"\n- Eingabe: \"E\", Verschiebung: -1 → Ausgabe: \"D\"\n\n**Nicht-Buchstaben** (z. B. Leerzeichen, Satzzeichen, Zahlen) sollen **unverändert** bleiben.\n\n### Aufgabe:\nSchreibe eine Methode `DecodeMessage(string input, int shift)`, die eine verschlüsselte Nachricht dekodiert, indem sie jeden Buchstaben mit dem übergebenen Verschiebungswert zurückverschiebt. \n\nDie Groß-/Kleinschreibung soll erhalten bleiben.\n\n### Beispiele:\n```csharp\nDecodeMessage(\"Khoor Zruog\", -3) => \"Hello World\"\nDecodeMessage(\"Fdhvdu Flskhu\", -3) => \"Caesar Cipher\"\nDecodeMessage(\"Ebiil Tloia\", 23) => \"Hello World\"\n```",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "csharp",
+    "strings",
+    "caesar",
+    "decoder",
+    "easy",
+    "verschlüsselung",
+    "algorithmen",
+    "einsteiger"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-27T08:00:27.269Z",
+  "status": "approved",
+  "starterCode": "using System;\n\npublic static class CaesarDecoder\n{\n    public static string DecodeMessage(string input, int shift)\n    {\n        // Deine Lösung hier\n        return \"\";\n    }\n}",
+  "solution": "using System;\n\npublic static class CaesarDecoder\n{\n    public static string DecodeMessage(string input, int shift)\n    {\n        string result = \"\";\n\n        foreach (char c in input)\n        {\n            if (char.IsLetter(c))\n            {\n                char offset = char.IsUpper(c) ? 'A' : 'a';\n                int pos = (c - offset + shift + 26) % 26;\n                result += (char)(offset + pos);\n            }\n            else\n            {\n                result += c;\n            }\n        }\n\n        return result;\n    }\n}",
+  "tests": "using System;\n\npublic static class CaesarDecoderTests\n{\n    public static void RunAllTests()\n    {\n        int passed = 0;\n        int total = 4;\n\n        Console.WriteLine(\"=== Caesar Decoder Tests ===\\n\");\n\n        if (Test(\"Test 1\", CaesarDecoder.DecodeMessage(\"Khoor Zruog\", -3), \"Hello World\")) passed++;\n        if (Test(\"Test 2\", CaesarDecoder.DecodeMessage(\"Fdhvdu Flskhu\", -3), \"Caesar Cipher\")) passed++;\n        if (Test(\"Test 3\", CaesarDecoder.DecodeMessage(\"Ebiil Tloia\", 23), \"Hello World\")) passed++;\n        if (Test(\"Test 4 (No Shift)\", CaesarDecoder.DecodeMessage(\"Unverändert\", 0), \"Unverändert\")) passed++;\n\n        Console.WriteLine($\"\\n{passed}/{total} Tests bestanden\");\n    }\n\n    private static bool Test(string name, string actual, string expected)\n    {\n        bool success = actual == expected;\n        Console.WriteLine(success\n            ? $\"[PASS] {name}\"\n            : $\"[FAIL] {name} | Erwartet: '{expected}', Erhalten: '{actual}'\");\n        return success;\n    }\n}",
+  "testClassName": "Tests",
+  "mainClassName": "GeheimerNachrichtendecoder",
+  "functionName": "GeheimerNachrichtendecoder"
+}
