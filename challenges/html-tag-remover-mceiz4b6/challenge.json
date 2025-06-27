@@ -14,15 +14,12 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-27T08:03:16.754Z",
-  "status": "reported",
+  "status": "approved",
   "starterCode": "using System;\n\npublic static class HtmlCleaner\n{\n    public static string RemoveHtmlTags(string html)\n    {\n        // TODO: Entferne alle HTML-Tags aus dem String\n        return \"\";\n    }\n}",
   "solution": "using System;\nusing System.Text.RegularExpressions;\n\npublic static class HtmlCleaner\n{\n    public static string RemoveHtmlTags(string html)\n    {\n        if (string.IsNullOrEmpty(html)) return \"\";\n        return Regex.Replace(html, \"<.*?>\", string.Empty);\n    }\n}",
   "tests": "using System;\n\npublic static class HtmlCleanerTests\n{\n    public static void RunAllTests()\n    {\n        int passed = 0;\n        int total = 4;\n        Console.WriteLine(\"=== HTML-Tag-Remover Tests ===\\n\");\n\n        if (Test(\"Test 1\", HtmlCleaner.RemoveHtmlTags(\"<p>Hello</p>\"), \"Hello\")) passed++;\n        if (Test(\"Test 2\", HtmlCleaner.RemoveHtmlTags(\"<div><b>Text</b> mit <i>Tags</i></div>\"), \"Text mit Tags\")) passed++;\n        if (Test(\"Test 3\", HtmlCleaner.RemoveHtmlTags(\"<a href='link'>Klick mich</a>\"), \"Klick mich\")) passed++;\n        if (Test(\"Empty\", HtmlCleaner.RemoveHtmlTags(\"\"), \"\")) passed++;\n\n        Console.WriteLine($\"\\n{passed}/{total} Tests bestanden\");\n    }\n\n    private static bool Test(string name, string actual, string expected)\n    {\n        bool success = actual == expected;\n        Console.WriteLine(success ? $\"[PASS] {name}\" : $\"[FAIL] {name} | Erwartet: '{expected}', Erhalten: '{actual}'\");\n        return success;\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "Htmltagremover",
   "functionName": "Htmltagremover",
-  "reportedIssueNumber": 95,
-  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/95",
-  "reportedAt": "2025-06-27T19:08:41.884Z",
-  "isHidden": true
+  "reportedAt": "2025-06-27T19:08:41.884Z"
 }
