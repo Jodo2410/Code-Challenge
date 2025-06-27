@@ -1,0 +1,25 @@
+{
+  "id": "mini-kontaktbuch-erstellen-mceioc7z",
+  "title": "Mini-Kontaktbuch erstellen",
+  "description": "Erstelle eine Klasse Contact mit den Eigenschaften Name (string) und PhoneNumber (string).\nErstelle zusätzlich eine Klasse ContactBook mit folgenden Methoden:\n- void AddContact(string name, string phoneNumber): Fügt einen neuen Kontakt hinzu.\n- bool ContactExists(string name): Gibt true zurück, wenn ein Kontakt mit diesem Namen existiert.\n- string GetPhoneNumber(string name): Gibt die Telefonnummer für einen gegebenen Namen zurück oder \"Kontakt nicht gefunden\".\n\nBeispiel:\n\nInput:\nAddContact(\"Anna\", \"12345\")\nAddContact(\"Ben\", \"67890\")\nContactExists(\"Anna\") => true\nGetPhoneNumber(\"Ben\") => \"67890\"\nGetPhoneNumber(\"Clara\") => \"Kontakt nicht gefunden\"\n\nErstelle die nötigen Klassen und Methoden.\nAchte auf gute Kapselung und korrektes Arbeiten mit Listen.\n",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "csharp",
+    "classes",
+    "easy",
+    "collections",
+    "basics",
+    "oop",
+    "methods"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-27T07:54:53.699Z",
+  "status": "approved",
+  "starterCode": "using System;\nusing System.Collections.Generic;\n\npublic static class ContactManager\n{\n    // Deine Lösung beginnt hier\n\n    // public class Contact { ... }\n    // public class ContactBook { ... }\n\n    // Deine Lösung endet hier\n}",
+  "solution": "using System;\nusing System.Collections.Generic;\n\npublic static class ContactManager\n{\n    public class Contact\n    {\n        public string Name { get; set; }\n        public string PhoneNumber { get; set; }\n\n        public Contact(string name, string phoneNumber)\n        {\n            Name = name;\n            PhoneNumber = phoneNumber;\n        }\n    }\n\n    public class ContactBook\n    {\n        private List<Contact> contacts = new List<Contact>();\n\n        public void AddContact(string name, string phoneNumber)\n        {\n            contacts.Add(new Contact(name, phoneNumber));\n        }\n\n        public bool ContactExists(string name)\n        {\n            foreach (var contact in contacts)\n            {\n                if (contact.Name == name)\n                    return true;\n            }\n            return false;\n        }\n\n        public string GetPhoneNumber(string name)\n        {\n            foreach (var contact in contacts)\n            {\n                if (contact.Name == name)\n                    return contact.PhoneNumber;\n            }\n            return \"Kontakt nicht gefunden\";\n        }\n    }\n}",
+  "tests": "using System;\n\npublic static class ContactManagerTests\n{\n    public static void RunAllTests()\n    {\n        var book = new ContactManager.ContactBook();\n\n        Console.WriteLine(\"Starte Tests für ContactBook\\n\");\n\n        book.AddContact(\"Anna\", \"12345\");\n        book.AddContact(\"Ben\", \"67890\");\n\n        Test(\"ContactExists - Anna\", book.ContactExists(\"Anna\") == true);\n        Test(\"ContactExists - Clara\", book.ContactExists(\"Clara\") == false);\n\n        Test(\"GetPhoneNumber - Ben\", book.GetPhoneNumber(\"Ben\") == \"67890\");\n        Test(\"GetPhoneNumber - Clara\", book.GetPhoneNumber(\"Clara\") == \"Kontakt nicht gefunden\");\n    }\n\n    private static void Test(string testName, bool result)\n    {\n        if (result)\n            Console.WriteLine($\"[PASS] {testName}\");\n        else\n            Console.WriteLine($\"[FAIL] {testName}\");\n    }\n}",
+  "testClassName": "Tests",
+  "mainClassName": "MinikontaktbuchErstellen",
+  "functionName": "MinikontaktbuchErstellen"
+}
