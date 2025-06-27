@@ -1,0 +1,88 @@
+name: ✅ Approve All Challenges
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "YES" to approve all challenges'
+        required: true
+        default: 'NO'
+
+permissions:
+  contents: write
+
+jobs:
+  approve-all:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'YES'
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ✅ Approve All Challenges
+        run: |
+          echo "🚀 Setze alle Challenges auf 'approved'..."
+          
+          UPDATED_COUNT=0
+          TOTAL_COUNT=0
+          
+          for dir in challenges/*/; do
+            if [ -f "$dir/challenge.json" ]; then
+              TOTAL_COUNT=$((TOTAL_COUNT + 1))
+              CONFIG_FILE="$dir/challenge.json"
+              CHALLENGE_ID=$(basename "$dir")
+              
+              echo "📝 Bearbeite: $CHALLENGE_ID"
+              
+              # Status auf approved setzen und alle Issue-Referenzen entfernen
+              cat "$CONFIG_FILE" | jq '
+                .status = "approved" |
+                del(.reportedIssueNumber) |
+                del(.reportedIssueUrl) |
+                del(.isHidden) |
+                .lastUpdated = now
+              ' > "$CONFIG_FILE.tmp"
+              
+              if [ $? -eq 0 ] && [ -s "$CONFIG_FILE.tmp" ]; then
+                mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+                echo "  ✅ $CHALLENGE_ID aktualisiert"
+                UPDATED_COUNT=$((UPDATED_COUNT + 1))
+              else
+                echo "  ❌ Fehler bei $CHALLENGE_ID"
+                rm -f "$CONFIG_FILE.tmp"
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "📊 Zusammenfassung:"
+          echo "   Gesamt: $TOTAL_COUNT Challenges"
+          echo "   Aktualisiert: $UPDATED_COUNT Challenges"
+          
+          echo "updated_count=$UPDATED_COUNT" >> $GITHUB_OUTPUT
+          echo "total_count=$TOTAL_COUNT" >> $GITHUB_OUTPUT
+
+      - name: 📤 Commit Changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Alle challenge.json Dateien stagen
+          git add challenges/*/challenge.json
+          
+          # Prüfen ob es Änderungen gibt
+          if git diff --staged --quiet; then
+            echo "ℹ️ Keine Änderungen gefunden"
+          else
+            echo "📤 Committe alle Änderungen..."
+            git commit -m "✅ Approve all challenges (manual run)"
+            git push
+            echo "✅ Alle Änderungen gepusht"
+          fi
+
+      - name: 📊 Summary
+        run: |
+          echo "🎉 Vorgang abgeschlossen!"
+          echo "✅ Alle Challenges sind jetzt auf 'approved' gesetzt"
+          echo "👁️ Alle Challenges sind wieder sichtbar für Benutzer"
