@@ -107,59 +107,57 @@ jobs:
             const language = '${{ steps.challenge-info.outputs.language }}' || '';
             const difficulty = '${{ steps.challenge-info.outputs.difficulty }}' || '';
             
-            // Sprach-Icons
             const languageIcons = {
-              'javascript': '🟨',
-              'python': '🐍', 
-              'java': '☕',
-              'csharp': '🔷',
-              'cpp': '⚙️',
-              'c': '🔧',
-              'go': '🐹'
+              'javascript': '🟨', 'python': '🐍', 'java': '☕',
+              'csharp': '🔷', 'cpp': '⚙️', 'c': '🔧', 'go': '🐹'
             };
             
-            // Schwierigkeits-Icons
             const difficultyIcons = {
-              'easy': '🟢',
-              'medium': '🟡', 
-              'hard': '🔴'
+              'easy': '🟢', 'medium': '🟡', 'hard': '🔴'
             };
             
             const langIcon = languageIcons[language] || '💻';
             const diffIcon = difficultyIcons[difficulty] || '⭐';
+            const fileExt = language === 'csharp' ? 'cs' : 
+                          language === 'javascript' ? 'js' : 
+                          language === 'python' ? 'py' : 
+                          language === 'cpp' ? 'cpp' : 
+                          language === 'c' ? 'c' : 'java';
             
-            const commentBody = `## 🔗 Challenge Quick Access
-
-**Challenge:** ${title}  
-**Details:** ${langIcon} ${language} • ${diffIcon} ${difficulty}  
-**ID:** \`${challengeId}\`
-
-### 📂 Links zur Challenge:
-
-| Action | Link | Beschreibung |
-|--------|------|--------------|
-| 📁 **GitHub** | **[Challenge in Repository öffnen](${repoUrl}/tree/main/challenges/${challengeId})** | Zeigt alle Challenge-Dateien im Browser |
-| 🎯 **VS Code** | **[In Extension laden](vscode://command/codingChallenges.loadChallengeById?${encodeURIComponent(JSON.stringify({challengeId: challengeId}))})** | Lädt Challenge direkt in VS Code Extension |
-| 📖 **README** | **[Dokumentation lesen](${repoUrl}/blob/main/challenges/${challengeId}/README.md)** | Challenge-Beschreibung und Anweisungen |
-| ⚙️ **Config** | **[challenge.json ansehen](${repoUrl}/blob/main/challenges/${challengeId}/challenge.json)** | Challenge-Konfiguration und Metadaten |
-
-### 🛠️ Entwickler-Links:
-
-| Datei | Link | Zweck |
-|-------|------|-------|
-| 📝 **Starter** | **[starter.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'}](${repoUrl}/blob/main/challenges/${challengeId}/starter.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'})** | User Code Template |
-| 🧪 **Tests** | **[tests.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'}](${repoUrl}/blob/main/challenges/${challengeId}/tests.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'})** | Test Framework |
-| 📖 **Solution** | **[solution.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'}](${repoUrl}/blob/main/challenges/${challengeId}/solution.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'})** | Referenz-Lösung |
-
----
-💡 **Tipp:** Verwende den VS Code Link um die Challenge direkt zu testen und zu reproduzieren!  
-🤖 *Automatisch hinzugefügt durch GitHub Actions*`;
+            const body = [
+              '## 🔗 Challenge Quick Access',
+              '',
+              `**Challenge:** ${title}`,
+              `**Details:** ${langIcon} ${language} • ${diffIcon} ${difficulty}`,
+              `**ID:** \`${challengeId}\``,
+              '',
+              '### 📂 Links zur Challenge:',
+              '',
+              '| Action | Link | Beschreibung |',
+              '|--------|------|--------------|',
+              `| 📁 **GitHub** | **[Challenge in Repository öffnen](${repoUrl}/tree/main/challenges/${challengeId})** | Zeigt alle Challenge-Dateien im Browser |`,
+              `| 🎯 **VS Code** | **[In Extension laden](vscode://command/codingChallenges.loadChallengeById?${encodeURIComponent(JSON.stringify({challengeId: challengeId}))})** | Lädt Challenge direkt in VS Code Extension |`,
+              `| 📖 **README** | **[Dokumentation lesen](${repoUrl}/blob/main/challenges/${challengeId}/README.md)** | Challenge-Beschreibung und Anweisungen |`,
+              `| ⚙️ **Config** | **[challenge.json ansehen](${repoUrl}/blob/main/challenges/${challengeId}/challenge.json)** | Challenge-Konfiguration und Metadaten |`,
+              '',
+              '### 🛠️ Entwickler-Links:',
+              '',
+              '| Datei | Link | Zweck |',
+              '|-------|------|-------|',
+              `| 📝 **Starter** | **[starter.${fileExt}](${repoUrl}/blob/main/challenges/${challengeId}/starter.${fileExt})** | User Code Template |`,
+              `| 🧪 **Tests** | **[tests.${fileExt}](${repoUrl}/blob/main/challenges/${challengeId}/tests.${fileExt})** | Test Framework |`,
+              `| 📖 **Solution** | **[solution.${fileExt}](${repoUrl}/blob/main/challenges/${challengeId}/solution.${fileExt})** | Referenz-Lösung |`,
+              '',
+              '---',
+              '💡 **Tipp:** Verwende den VS Code Link um die Challenge direkt zu testen und zu reproduzieren!',
+              '🤖 *Automatisch hinzugefügt durch GitHub Actions*'
+            ].join('\n');
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: commentBody
+              body: body
             });
             
             console.log('✅ Challenge-Links hinzugefügt');
@@ -193,21 +191,25 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const body = [
+              '⚠️ **Challenge ID konnte nicht automatisch ermittelt werden**',
+              '',
+              'Um die Challenge-Links hinzuzufügen, bitte folgende Informationen ergänzen:',
+              '',
+              '1. **Challenge ID** in der Beschreibung: `Challenge ID: your-challenge-id`',
+              '2. **Challenge Titel** im Issue-Titel: `Challenge Error: Your Challenge Title`',
+              '',
+              'Dann können die Links automatisch hinzugefügt werden.',
+              '',
+              '---',
+              '🤖 *Automatischer Check durch GitHub Actions*'
+            ].join('\n');
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `⚠️ **Challenge ID konnte nicht automatisch ermittelt werden**
-
-Um die Challenge-Links hinzuzufügen, bitte folgende Informationen ergänzen:
-
-1. **Challenge ID** in der Beschreibung: \`Challenge ID: your-challenge-id\`
-2. **Challenge Titel** im Issue-Titel: \`Challenge Error: Your Challenge Title\`
-
-Dann können die Links automatisch hinzugefügt werden.
-
----
-🤖 *Automatischer Check durch GitHub Actions*`
+              body: body
             });
 
   # Fallback für Issues ohne challenge-error Label
@@ -220,24 +222,30 @@ Dann können die Links automatisch hinzugefügt werden.
         uses: actions/github-script@v7
         with:
           script: |
+            const repoUrl = context.payload.repository.html_url;
+            
+            const body = [
+              '## 🎯 Challenge-bezogenes Issue erkannt',
+              '',
+              'Es sieht so aus, als würde sich dieses Issue auf eine Challenge beziehen.',
+              '',
+              '### 📋 Für automatische Links:',
+              'Füge das Label `challenge-error` hinzu und stelle sicher, dass die **Challenge ID** in der Beschreibung steht:',
+              '```',
+              'Challenge ID: your-challenge-id',
+              '```',
+              '',
+              '### 🔗 Allgemeine Links:',
+              `- **[📁 Alle Challenges](${repoUrl}/tree/main/challenges)** - Repository durchsuchen`,
+              '- **[🎯 VS Code Extension](vscode://command/codingChallenges.showChallenges)** - Challenge Browser öffnen',
+              '',
+              '---',
+              '🤖 *Automatische Erkennung durch GitHub Actions*'
+            ].join('\n');
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🎯 Challenge-bezogenes Issue erkannt
-
-Es sieht so aus, als würde sich dieses Issue auf eine Challenge beziehen.
-
-### 📋 Für automatische Links:
-Füge das Label \`challenge-error\` hinzu und stelle sicher, dass die **Challenge ID** in der Beschreibung steht:
-\`\`\`
-Challenge ID: your-challenge-id
-\`\`\`
-
-### 🔗 Allgemeine Links:
-- **[📁 Alle Challenges](${context.payload.repository.html_url}/tree/main/challenges)** - Repository durchsuchen
-- **[🎯 VS Code Extension](vscode://command/codingChallenges.showChallenges)** - Challenge Browser öffnen
-
----
-🤖 *Automatische Erkennung durch GitHub Actions*`
+              body: body
             });
