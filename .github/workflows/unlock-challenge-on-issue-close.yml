@@ -1,383 +1,72 @@
-# GitHub Actions Workflow für automatische Challenge-Status-Updates
-# Wird ausgelöst wenn ein Issue mit "challenge-error" Label geschlossen wird
-
-name: 🔧 Challenge Issue Handler
+name: 🔧 Reset Challenge Status
 
 on:
   issues:
     types: [closed]
 
-# ✅ WICHTIG: Token-Berechtigungen definieren
 permissions:
-  contents: write        # Zum Ändern von Dateien
-  issues: write         # Zum Kommentieren von Issues
-  metadata: read        # Standard-Berechtigung
+  contents: write
+  issues: write
 
 jobs:
-  reset-challenge-status:
-    name: 🔄 Reset Challenge Status
+  reset-status:
     runs-on: ubuntu-latest
-    
-    # Nur ausführen wenn Issue das "challenge-error" Label hat
     if: contains(github.event.issue.labels.*.name, 'challenge-error')
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
-      - name: 🔍 Extract Challenge ID from Issue
-        id: extract-challenge
+      - name: 🔍 Find Challenge
+        id: find-challenge
         run: |
-          # Challenge ID aus Issue-Body oder Titel extrahieren
-          ISSUE_BODY="${{ github.event.issue.body }}"
-          ISSUE_TITLE="${{ github.event.issue.title }}"
-          
-          echo "🔍 Analysiere Issue #${{ github.event.issue.number }}"
-          echo "📋 Titel: $ISSUE_TITLE"
-          
-          # Pattern 1: Challenge ID aus Issue Body extrahieren
+          # Suche Challenge anhand Issue-Nummer
           CHALLENGE_ID=""
-          
-          # Suche nach "Challenge ID: xyz" oder "ID: xyz" im Body
-          if echo "$ISSUE_BODY" | grep -q "Challenge.*ID.*:"; then
-            CHALLENGE_ID=$(echo "$ISSUE_BODY" | grep -o "Challenge.*ID.*:\s*\`[^`]*\`" | sed 's/.*`\([^`]*\)`.*/\1/')
-          elif echo "$ISSUE_BODY" | grep -q "ID.*:"; then
-            CHALLENGE_ID=$(echo "$ISSUE_BODY" | grep -o "ID.*:\s*\`[^`]*\`" | sed 's/.*`\([^`]*\)`.*/\1/')
-          fi
-          
-          # Pattern 2: Aus Issue-Titel extrahieren (Format: "Challenge Error: Title (language)")
-          if [ -z "$CHALLENGE_ID" ] && echo "$ISSUE_TITLE" | grep -q "Challenge Error:"; then
-            # Extrahiere Challenge-Namen aus Titel und konvertiere zu ID
-            CHALLENGE_NAME=$(echo "$ISSUE_TITLE" | sed 's/.*Challenge Error:\s*\([^(]*\).*/\1/' | sed 's/[[:space:]]*$//')
-            echo "📝 Challenge Name gefunden: $CHALLENGE_NAME"
-            
-            # Suche nach challenge.json Dateien mit diesem Titel
-            for challenge_dir in challenges/*/; do
-              if [ -f "$challenge_dir/challenge.json" ]; then
-                TITLE_IN_FILE=$(cat "$challenge_dir/challenge.json" | grep -o '"title":\s*"[^"]*"' | sed 's/"title":\s*"\([^"]*)"/\1/')
-                if [ "$TITLE_IN_FILE" = "$CHALLENGE_NAME" ]; then
-                  CHALLENGE_ID=$(basename "$challenge_dir")
-                  echo "✅ Challenge ID gefunden: $CHALLENGE_ID"
-                  break
-                fi
+          for dir in challenges/*/; do
+            if [ -f "$dir/challenge.json" ]; then
+              ISSUE_NUM=$(cat "$dir/challenge.json" | grep -o '"reportedIssueNumber":\s*[0-9]*' | sed 's/"reportedIssueNumber":\s*\([0-9]*\)/\1/')
+              if [ "$ISSUE_NUM" = "${{ github.event.issue.number }}" ]; then
+                CHALLENGE_ID=$(basename "$dir")
+                break
               fi
-            done
-          fi
-          
-          # Pattern 3: Challenge ID direkt aus verfügbaren Ordnern ableiten
-          if [ -z "$CHALLENGE_ID" ]; then
-            echo "⚠️ Challenge ID nicht aus Issue extrahiert. Suche in challenges/ Verzeichnis..."
-            
-            # Liste alle Challenge-Verzeichnisse und suche nach passendem Titel
-            for challenge_dir in challenges/*/; do
-              if [ -f "$challenge_dir/challenge.json" ]; then
-                # Prüfe ob diese Challenge als "reported" markiert ist
-                STATUS=$(cat "$challenge_dir/challenge.json" | grep -o '"status":\s*"[^"]*"' | sed 's/"status":\s*"\([^"]*\)"/\1/')
-                ISSUE_NUM=$(cat "$challenge_dir/challenge.json" | grep -o '"reportedIssueNumber":\s*[0-9]*' | sed 's/"reportedIssueNumber":\s*\([0-9]*\)/\1/')
-                
-                if [ "$STATUS" = "reported" ] && [ "$ISSUE_NUM" = "${{ github.event.issue.number }}" ]; then
-                  CHALLENGE_ID=$(basename "$challenge_dir")
-                  echo "✅ Challenge ID über Issue-Nummer gefunden: $CHALLENGE_ID"
-                  break
-                fi
-              fi
-            done
-          fi
+            fi
+          done
           
           if [ -z "$CHALLENGE_ID" ]; then
-            echo "❌ Challenge ID konnte nicht bestimmt werden!"
-            echo "🔍 Verfügbare Challenge-Verzeichnisse:"
-            ls -la challenges/ || echo "Kein challenges/ Verzeichnis gefunden"
+            echo "❌ Challenge nicht gefunden"
             exit 1
           fi
           
-          echo "🎯 Challenge ID: $CHALLENGE_ID"
           echo "challenge_id=$CHALLENGE_ID" >> $GITHUB_OUTPUT
 
-      - name: 📂 Verify Challenge Directory
-        id: verify-challenge
+      - name: 🔄 Reset Status
         run: |
-          CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
-          CHALLENGE_PATH="challenges/$CHALLENGE_ID"
+          CHALLENGE_ID="${{ steps.find-challenge.outputs.challenge_id }}"
+          CONFIG_FILE="challenges/$CHALLENGE_ID/challenge.json"
           
-          echo "🔍 Prüfe Challenge-Verzeichnis: $CHALLENGE_PATH"
-          
-          if [ ! -d "$CHALLENGE_PATH" ]; then
-            echo "❌ Challenge-Verzeichnis nicht gefunden: $CHALLENGE_PATH"
-            echo "📁 Verfügbare Verzeichnisse:"
-            ls -la challenges/ || echo "Kein challenges/ Verzeichnis gefunden"
-            exit 1
-          fi
-          
-          if [ ! -f "$CHALLENGE_PATH/challenge.json" ]; then
-            echo "❌ challenge.json nicht gefunden in: $CHALLENGE_PATH"
-            echo "📁 Verzeichnisinhalt:"
-            ls -la "$CHALLENGE_PATH"
-            exit 1
-          fi
-          
-          echo "✅ Challenge-Verzeichnis und challenge.json gefunden"
-          echo "challenge_path=$CHALLENGE_PATH" >> $GITHUB_OUTPUT
-
-      - name: 📄 Read Current Challenge Config
-        id: read-config
-        run: |
-          CHALLENGE_PATH="${{ steps.verify-challenge.outputs.challenge_path }}"
-          CONFIG_FILE="$CHALLENGE_PATH/challenge.json"
-          
-          echo "📖 Lese aktuelle Konfiguration aus: $CONFIG_FILE"
-          
-          # Aktuelle Konfiguration anzeigen
-          echo "📋 Aktuelle challenge.json:"
-          cat "$CONFIG_FILE" | jq '.' || cat "$CONFIG_FILE"
-          
-          # Status prüfen
-          CURRENT_STATUS=$(cat "$CONFIG_FILE" | jq -r '.status // "unknown"')
-          REPORTED_ISSUE=$(cat "$CONFIG_FILE" | jq -r '.reportedIssueNumber // "none"')
-          IS_HIDDEN=$(cat "$CONFIG_FILE" | jq -r '.isHidden // false')
-          
-          echo "📊 Aktueller Status: $CURRENT_STATUS"
-          echo "🔗 Gemeldetes Issue: $REPORTED_ISSUE"
-          echo "👁️ Versteckt: $IS_HIDDEN"
-          
-          echo "current_status=$CURRENT_STATUS" >> $GITHUB_OUTPUT
-          echo "reported_issue=$REPORTED_ISSUE" >> $GITHUB_OUTPUT
-          echo "is_hidden=$IS_HIDDEN" >> $GITHUB_OUTPUT
-
-      - name: 🔄 Update Challenge Status
-        id: update-status
-        run: |
-          CHALLENGE_PATH="${{ steps.verify-challenge.outputs.challenge_path }}"
-          CONFIG_FILE="$CHALLENGE_PATH/challenge.json"
-          CURRENT_STATUS="${{ steps.read-config.outputs.current_status }}"
-          
-          echo "🔧 Aktualisiere Challenge-Status..."
-          echo "📁 Datei: $CONFIG_FILE"
-          echo "📊 Aktueller Status: $CURRENT_STATUS"
-          
-          # Backup der ursprünglichen Datei erstellen
-          cp "$CONFIG_FILE" "$CONFIG_FILE.backup"
-          echo "💾 Backup erstellt: $CONFIG_FILE.backup"
-          
-          # Status auf "approved" setzen und Issue-Referenzen entfernen
+          # Status auf approved setzen, Issue-Referenzen entfernen
           cat "$CONFIG_FILE" | jq '
             .status = "approved" |
             del(.reportedIssueNumber) |
             del(.reportedIssueUrl) |
-            del(.isHidden) |
-            .lastUpdated = now |
-            .resolvedAt = now |
-            .resolvedBy = "github-actions"
-          ' > "$CONFIG_FILE.tmp"
-          
-          # Prüfen ob jq erfolgreich war
-          if [ $? -eq 0 ] && [ -s "$CONFIG_FILE.tmp" ]; then
-            mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-            echo "✅ Challenge-Status erfolgreich aktualisiert"
-            
-            echo "📋 Neue Konfiguration:"
-            cat "$CONFIG_FILE" | jq '.'
-            
-            # Prüfe ob Status wirklich geändert wurde
-            NEW_STATUS=$(cat "$CONFIG_FILE" | jq -r '.status')
-            if [ "$NEW_STATUS" = "approved" ]; then
-              echo "✅ Status-Update bestätigt: $NEW_STATUS"
-              echo "status_updated=true" >> $GITHUB_OUTPUT
-            else
-              echo "❌ Status-Update fehlgeschlagen: $NEW_STATUS"
-              echo "status_updated=false" >> $GITHUB_OUTPUT
-              exit 1
-            fi
-          else
-            echo "❌ jq-Bearbeitung fehlgeschlagen"
-            echo "🔄 Stelle Backup wieder her..."
-            mv "$CONFIG_FILE.backup" "$CONFIG_FILE"
-            echo "status_updated=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
+            del(.isHidden)
+          ' > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
 
-      - name: 🔍 Handle Error Report File
-        id: handle-error-report
+      - name: 📤 Commit
         run: |
-          CHALLENGE_PATH="${{ steps.verify-challenge.outputs.challenge_path }}"
-          ERROR_REPORT_FILE="$CHALLENGE_PATH/error-report.json"
-          
-          echo "🔍 Suche nach error-report.json..."
-          
-          if [ -f "$ERROR_REPORT_FILE" ]; then
-            echo "📄 error-report.json gefunden: $ERROR_REPORT_FILE"
-            
-            # Error Report als resolved markieren (nicht löschen für Audit-Trail)
-            cat "$ERROR_REPORT_FILE" | jq '
-              .isResolved = true |
-              .resolvedAt = now |
-              .resolvedBy = "github-actions" |
-              .resolvedViaIssue = ${{ github.event.issue.number }}
-            ' > "$ERROR_REPORT_FILE.tmp"
-            
-            if [ $? -eq 0 ] && [ -s "$ERROR_REPORT_FILE.tmp" ]; then
-              mv "$ERROR_REPORT_FILE.tmp" "$ERROR_REPORT_FILE"
-              echo "✅ Error Report als resolved markiert"
-              echo "error_report_updated=true" >> $GITHUB_OUTPUT
-            else
-              echo "⚠️ Fehler beim Aktualisieren des Error Reports"
-              rm -f "$ERROR_REPORT_FILE.tmp"
-              echo "error_report_updated=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "ℹ️ Kein error-report.json gefunden (OK)"
-            echo "error_report_updated=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 📝 Create Resolution Log
-        run: |
-          CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
-          CHALLENGE_PATH="${{ steps.verify-challenge.outputs.challenge_path }}"
-          RESOLUTION_LOG="$CHALLENGE_PATH/resolution-log.json"
-          
-          echo "📝 Erstelle Resolution Log..."
-          
-          # Resolution Log erstellen oder erweitern
-          if [ -f "$RESOLUTION_LOG" ]; then
-            # Bestehenden Log erweitern
-            cat "$RESOLUTION_LOG" | jq --arg issue_num "${{ github.event.issue.number }}" --arg issue_url "${{ github.event.issue.html_url }}" '
-              .resolutions += [{
-                "issueNumber": ($issue_num | tonumber),
-                "issueUrl": $issue_url,
-                "resolvedAt": now,
-                "resolvedBy": "github-actions",
-                "workflow": "challenge-issue-handler"
-              }]
-            ' > "$RESOLUTION_LOG.tmp"
-          else
-            # Neuen Log erstellen
-            jq -n --arg challenge_id "$CHALLENGE_ID" --arg issue_num "${{ github.event.issue.number }}" --arg issue_url "${{ github.event.issue.html_url }}" '{
-              "challengeId": $challenge_id,
-              "resolutions": [{
-                "issueNumber": ($issue_num | tonumber),
-                "issueUrl": $issue_url,
-                "resolvedAt": now,
-                "resolvedBy": "github-actions",
-                "workflow": "challenge-issue-handler"
-              }]
-            }' > "$RESOLUTION_LOG.tmp"
-          fi
-          
-          if [ $? -eq 0 ] && [ -s "$RESOLUTION_LOG.tmp" ]; then
-            mv "$RESOLUTION_LOG.tmp" "$RESOLUTION_LOG"
-            echo "✅ Resolution Log erstellt/aktualisiert"
-          else
-            echo "⚠️ Fehler beim Erstellen des Resolution Logs"
-            rm -f "$RESOLUTION_LOG.tmp"
-          fi
-
-      - name: 🚀 Commit Changes
-        run: |
-          CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
-          
-          # Git-Konfiguration
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          
-          # Änderungen stagen
-          git add "challenges/$CHALLENGE_ID/"
-          
-          # Prüfen ob es Änderungen gibt
-          if git diff --staged --quiet; then
-            echo "ℹ️ Keine Änderungen zum Committen"
-          else
-            echo "📤 Committe Änderungen..."
-            
-            # Commit mit detaillierter Nachricht
-            git commit -m "🔧 Reset challenge status after issue resolution
-            
-            ✅ Challenge: $CHALLENGE_ID
-            🔗 Resolved Issue: #${{ github.event.issue.number }}
-            📊 Status: reported → approved
-            👁️ Visibility: restored
-            🤖 Automated by: GitHub Actions
-            
-            The challenge is now available again for users.
-            Challenge-specific error has been resolved."
-            
-            # Push Änderungen
-            git push
-            
-            echo "✅ Änderungen erfolgreich committed und gepusht"
-          fi
+          git add "challenges/${{ steps.find-challenge.outputs.challenge_id }}/challenge.json"
+          git commit -m "🔧 Reset challenge status (Issue #${{ github.event.issue.number }})"
+          git push
 
-      - name: 📊 Summary Report
-        run: |
-          echo "🎉 Challenge Issue Handler - Zusammenfassung"
-          echo "=============================================="
-          echo "🎯 Challenge ID: ${{ steps.extract-challenge.outputs.challenge_id }}"
-          echo "🔗 Issue: #${{ github.event.issue.number }} - ${{ github.event.issue.title }}"
-          echo "📊 Status Update: ${{ steps.update-status.outputs.status_updated }}"
-          echo "📄 Error Report: ${{ steps.handle-error-report.outputs.error_report_updated }}"
-          echo "⏰ Zeitpunkt: $(date -u)"
-          echo ""
-          echo "✅ Challenge ist wieder verfügbar für Benutzer!"
-          echo "🔧 Das gemeldete Problem wurde als gelöst markiert."
-
-      - name: 💬 Comment on Issue
+      - name: 💬 Comment
         uses: actions/github-script@v7
         with:
           script: |
-            const challengeId = '${{ steps.extract-challenge.outputs.challenge_id }}';
-            const statusUpdated = '${{ steps.update-status.outputs.status_updated }}' === 'true';
-            
-            if (statusUpdated) {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `🤖 **Automatische Challenge-Wiederherstellung**
-
-✅ **Challenge Status aktualisiert**
-- **Challenge ID:** \`${challengeId}\`
-- **Status:** \`reported\` → \`approved\`
-- **Sichtbarkeit:** Wiederhergestellt
-
-🎯 **Ergebnis:** Die Challenge ist jetzt wieder für alle Benutzer verfügbar!
-
----
-🔧 *Automatisch verarbeitet durch GitHub Actions*`
-              });
-              
-              console.log('✅ Bestätigungskommentar hinzugefügt');
-            } else {
-              console.log('⚠️ Status nicht aktualisiert - kein Kommentar hinzugefügt');
-            }
-
-  # Fallback Job für Debugging bei Fehlern
-  debug-info:
-    name: 🐛 Debug Information
-    runs-on: ubuntu-latest
-    if: failure() && contains(github.event.issue.labels.*.name, 'challenge-error')
-    needs: [reset-challenge-status]
-    
-    steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-        
-      - name: 🔍 Debug Information
-        run: |
-          echo "🐛 Debug-Informationen für fehlgeschlagenen Workflow"
-          echo "===================================================="
-          echo "📋 Issue #${{ github.event.issue.number }}"
-          echo "🏷️ Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}"
-          echo "📝 Titel: ${{ github.event.issue.title }}"
-          echo ""
-          echo "📁 Verfügbare Challenge-Verzeichnisse:"
-          ls -la challenges/ || echo "❌ Kein challenges/ Verzeichnis"
-          echo ""
-          echo "🔍 Challenge-Verzeichnisse mit 'reported' Status:"
-          for dir in challenges/*/; do
-            if [ -f "$dir/challenge.json" ]; then
-              status=$(cat "$dir/challenge.json" | grep -o '"status":\s*"[^"]*"' | head -1)
-              echo "  $(basename $dir): $status"
-            fi
-          done
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ Challenge \`${{ steps.find-challenge.outputs.challenge_id }}\` wurde wieder freigegeben!`
+            });
