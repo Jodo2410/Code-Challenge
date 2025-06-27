@@ -1,6 +1,6 @@
 using System;
 
-public static class ArrayUtilsTests
+public static class Tests
 {
     public static void RunAllTests()
     {
