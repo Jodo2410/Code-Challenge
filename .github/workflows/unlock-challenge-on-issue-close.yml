@@ -7,6 +7,12 @@ on:
   issues:
     types: [closed]
 
+# ✅ WICHTIG: Token-Berechtigungen definieren
+permissions:
+  contents: write        # Zum Ändern von Dateien
+  issues: write         # Zum Kommentieren von Issues
+  metadata: read        # Standard-Berechtigung
+
 jobs:
   reset-challenge-status:
     name: 🔄 Reset Challenge Status
@@ -287,15 +293,15 @@ jobs:
             
             # Commit mit detaillierter Nachricht
             git commit -m "🔧 Reset challenge status after issue resolution
-
-✅ Challenge: $CHALLENGE_ID
-🔗 Resolved Issue: #${{ github.event.issue.number }}
-📊 Status: reported → approved
-👁️ Visibility: restored
-🤖 Automated by: GitHub Actions
-
-The challenge is now available again for users.
-Challenge-specific error has been resolved."
+            
+            ✅ Challenge: $CHALLENGE_ID
+            🔗 Resolved Issue: #${{ github.event.issue.number }}
+            📊 Status: reported → approved
+            👁️ Visibility: restored
+            🤖 Automated by: GitHub Actions
+            
+            The challenge is now available again for users.
+            Challenge-specific error has been resolved."
             
             # Push Änderungen
             git push
