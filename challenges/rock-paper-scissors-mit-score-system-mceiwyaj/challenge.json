@@ -1,0 +1,27 @@
+{
+  "id": "rock-paper-scissors-mit-score-system-mceiwyaj",
+  "title": "Rock-Paper-Scissors mit Score-System",
+  "description": "### Einführung:\nErstelle ein kleines System für das klassische Spiel **Schere-Stein-Papier** (engl. Rock-Paper-Scissors), bei dem zwei Spieler gegeneinander antreten. Ziel ist es, ein Objektorientiertes System mit Punktezählung zu entwerfen.\n\n### Regeln:\n- **Rock** schlägt **Scissors**\n- **Scissors** schlägt **Paper**\n- **Paper** schlägt **Rock**\n\n### Aufgabe:\n1. Erstelle ein Enum `Move` mit den Werten `Rock`, `Paper`, `Scissors`\n2. Implementiere eine Methode `DetermineWinner(Move player1, Move player2)`, die `1`, `2` oder `0` zurückgibt (Spieler 1 gewinnt, Spieler 2 gewinnt, Unentschieden).\n3. Erstelle eine Klasse `Scoreboard`, die die Punkte beider Spieler verwaltet.\n4. Schreibe Methoden, um Runden zu spielen und die Gesamtpunktzahl zu aktualisieren.\n\n### Beispiele:\n```csharp\nDetermineWinner(Move.Rock, Move.Scissors) => 1\nDetermineWinner(Move.Scissors, Move.Rock) => 2\nDetermineWinner(Move.Paper, Move.Paper) => 0\n```",
+  "difficulty": "hard",
+  "language": "csharp",
+  "tags": [
+    "csharp",
+    "oop",
+    "enum",
+    "spiel",
+    "logik",
+    "hard",
+    "score",
+    "methoden",
+    "testbar"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-27T08:01:35.590Z",
+  "status": "approved",
+  "starterCode": "using System;\n\npublic enum Move\n{\n    Rock,\n    Paper,\n    Scissors\n}\n\npublic static class RPSLogic\n{\n    public static int DetermineWinner(Move player1, Move player2)\n    {\n        // TODO: Implementiere die Spielregel-Logik\n        return -1;\n    }\n}\n\npublic class Scoreboard\n{\n    public int Player1Score { get; private set; }\n    public int Player2Score { get; private set; }\n\n    public void PlayRound(Move player1, Move player2)\n    {\n        // TODO: Verwende RPSLogic.DetermineWinner und aktualisiere die Punkte\n    }\n\n    public string GetScore()\n    {\n        // TODO: Gib den Punktestand zurück (z. B. \"Spieler 1: 2 | Spieler 2: 1\")\n        return \"\";\n    }\n}",
+  "solution": "using System;\n\npublic enum Move\n{\n    Rock,\n    Paper,\n    Scissors\n}\n\npublic static class RPSLogic\n{\n    public static int DetermineWinner(Move player1, Move player2)\n    {\n        if (player1 == player2) return 0;\n\n        if ((player1 == Move.Rock && player2 == Move.Scissors) ||\n            (player1 == Move.Scissors && player2 == Move.Paper) ||\n            (player1 == Move.Paper && player2 == Move.Rock))\n        {\n            return 1;\n        }\n\n        return 2;\n    }\n}\n\npublic class Scoreboard\n{\n    public int Player1Score { get; private set; } = 0;\n    public int Player2Score { get; private set; } = 0;\n\n    public void PlayRound(Move player1, Move player2)\n    {\n        int result = RPSLogic.DetermineWinner(player1, player2);\n        if (result == 1) Player1Score++;\n        else if (result == 2) Player2Score++;\n    }\n\n    public string GetScore()\n    {\n        return $\"Spieler 1: {Player1Score} | Spieler 2: {Player2Score}\";\n    }\n}",
+  "tests": "using System;\n\npublic static class RPSTests\n{\n    public static void RunAllTests()\n    {\n        int passed = 0;\n        int total = 6;\n\n        Console.WriteLine(\"=== Rock-Paper-Scissors Tests ===\\n\");\n\n        if (Test(\"Rock vs Scissors\", RPSLogic.DetermineWinner(Move.Rock, Move.Scissors), 1)) passed++;\n        if (Test(\"Scissors vs Paper\", RPSLogic.DetermineWinner(Move.Scissors, Move.Paper), 1)) passed++;\n        if (Test(\"Paper vs Rock\", RPSLogic.DetermineWinner(Move.Paper, Move.Rock), 1)) passed++;\n        if (Test(\"Draw: Rock vs Rock\", RPSLogic.DetermineWinner(Move.Rock, Move.Rock), 0)) passed++;\n        if (Test(\"Scissors vs Rock\", RPSLogic.DetermineWinner(Move.Scissors, Move.Rock), 2)) passed++;\n\n        Scoreboard board = new Scoreboard();\n        board.PlayRound(Move.Rock, Move.Scissors); // Spieler 1 gewinnt\n        board.PlayRound(Move.Scissors, Move.Rock); // Spieler 2 gewinnt\n        board.PlayRound(Move.Paper, Move.Paper);   // Unentschieden\n        string score = board.GetScore();\n        if (Test(\"Scoreboard Ergebnis\", score, \"Spieler 1: 1 | Spieler 2: 1\")) passed++;\n\n        Console.WriteLine($\"\\n{passed}/{total} Tests bestanden\");\n    }\n\n    private static bool Test(string name, object actual, object expected)\n    {\n        bool success = actual.Equals(expected);\n        Console.WriteLine(success\n            ? $\"[PASS] {name}\"\n            : $\"[FAIL] {name} | Erwartet: '{expected}', Erhalten: '{actual}'\");\n        return success;\n    }\n}",
+  "testClassName": "Tests",
+  "mainClassName": "RockpaperscissorsMitScoresystem",
+  "functionName": "RockpaperscissorsMitScoresystem"
+}
