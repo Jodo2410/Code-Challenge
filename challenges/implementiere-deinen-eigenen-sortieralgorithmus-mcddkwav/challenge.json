@@ -16,12 +16,15 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-26T12:44:29.082Z",
-  "status": "approved",
+  "status": "reported",
   "starterCode": "using System;\n\npublic static class Solution {\n    public static void CustomSort(int[] nums) {\n        // Implementiere hier deinen eigenen Sortieralgorithmus\n    }\n}",
   "solution": "using System;\n\npublic static class Solution {\n    public static void CustomSort(int[] nums) {\n        MergeSort(nums, 0, nums.Length - 1);\n    }\n\n    private static void MergeSort(int[] arr, int left, int right) {\n        if (left < right) {\n            int mid = (left + right) / 2;\n            MergeSort(arr, left, mid);\n            MergeSort(arr, mid + 1, right);\n            Merge(arr, left, mid, right);\n        }\n    }\n\n    private static void Merge(int[] arr, int left, int mid, int right) {\n        int n1 = mid - left + 1;\n        int n2 = right - mid;\n\n        int[] L = new int[n1];\n        int[] R = new int[n2];\n\n        for (int i = 0; i < n1; i++)\n            L[i] = arr[left + i];\n        for (int j = 0; j < n2; j++)\n            R[j] = arr[mid + 1 + j];\n\n        int iIndex = 0, jIndex = 0, k = left;\n        while (iIndex < n1 && jIndex < n2) {\n            if (L[iIndex] <= R[jIndex]) {\n                arr[k++] = L[iIndex++];\n            } else {\n                arr[k++] = R[jIndex++];\n            }\n        }\n\n        while (iIndex < n1) arr[k++] = L[iIndex++];\n        while (jIndex < n2) arr[k++] = R[jIndex++];\n    }\n}",
   "tests": "using System;\nusing System.Diagnostics;\n\npublic static class Tests {\n    public static void RunAllTests() {\n        Test(new int[] {5, 3, 8, 1, 2}, new int[] {1, 2, 3, 5, 8}, \"Test 1 - Kleine Liste\");\n        Test(new int[] {10, -3, 0, 4, 7}, new int[] {-3, 0, 4, 7, 10}, \"Test 2 - Mit negativen Zahlen\");\n        TestPerformance(100000, 200, \"Performance Test - 100.000 Elemente unter 200ms\");\n    }\n\n    private static void Test(int[] input, int[] expected, string testName) {\n        int[] copy = (int[])input.Clone();\n        Solution.CustomSort(copy);\n        bool success = copy.Length == expected.Length;\n\n        for (int i = 0; i < expected.Length && success; i++) {\n            if (copy[i] != expected[i]) success = false;\n        }\n\n        Console.WriteLine(success\n            ? $\"[✔] {testName} bestanden\"\n            : $\"[✘] {testName} fehlgeschlagen: Ergebnis stimmt nicht.\");\n    }\n\n    private static void TestPerformance(int size, int maxMilliseconds, string testName) {\n        int[] input = new int[size];\n        Random rnd = new Random();\n        for (int i = 0; i < size; i++) input[i] = rnd.Next();\n\n        Stopwatch sw = Stopwatch.StartNew();\n        Solution.CustomSort((int[])input.Clone());\n        sw.Stop();\n\n        if (sw.ElapsedMilliseconds <= maxMilliseconds) {\n            Console.WriteLine($\"[✔] {testName} in {sw.ElapsedMilliseconds}ms\");\n        } else {\n            Console.WriteLine($\"[✘] {testName} zu langsam: {sw.ElapsedMilliseconds}ms > {maxMilliseconds}ms\");\n        }\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "ImplementiereDeinenEigenenSortieralgorithmus",
   "functionName": "ImplementiereDeinenEigenenSortieralgorithmus",
-  "lastUpdated": 1751006869.319958
+  "lastUpdated": 1751006869.319958,
+  "reportedIssueNumber": 75,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/75",
+  "isHidden": true
 }
