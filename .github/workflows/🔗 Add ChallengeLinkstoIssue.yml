@@ -20,36 +20,39 @@ jobs:
       - name: 🔍 Extract Challenge ID
         id: extract-challenge
         run: |
-          ISSUE_BODY="${{ github.event.issue.body }}"
-          ISSUE_TITLE="${{ github.event.issue.title }}"
+          # Issue Body und Title sicher lesen
+          echo '${{ github.event.issue.body }}' > /tmp/issue_body.txt
+          echo '${{ github.event.issue.title }}' > /tmp/issue_title.txt
           
           echo "Suche Challenge ID..."
           
           CHALLENGE_ID=""
           
           # Pattern 1: Challenge ID aus Issue Body
-          if echo "$ISSUE_BODY" | grep -q "Challenge.*ID.*:"; then
-            CHALLENGE_ID=$(echo "$ISSUE_BODY" | grep -o "Challenge.*ID.*:\s*\`[^`]*\`" | sed 's/.*`\([^`]*\)`.*/\1/')
-          elif echo "$ISSUE_BODY" | grep -q "ID.*:"; then
-            CHALLENGE_ID=$(echo "$ISSUE_BODY" | grep -o "ID.*:\s*\`[^`]*\`" | sed 's/.*`\([^`]*\)`.*/\1/')
+          if grep -q "Challenge.*ID.*:" /tmp/issue_body.txt; then
+            CHALLENGE_ID=$(grep -o "Challenge.*ID.*:\s*\`[^`]*\`" /tmp/issue_body.txt | sed 's/.*`\([^`]*\)`.*/\1/' | head -1)
+          elif grep -q "ID.*:" /tmp/issue_body.txt; then
+            CHALLENGE_ID=$(grep -o "ID.*:\s*\`[^`]*\`" /tmp/issue_body.txt | sed 's/.*`\([^`]*\)`.*/\1/' | head -1)
           fi
           
           # Pattern 2: Aus Issue-Titel extrahieren
-          if [ -z "$CHALLENGE_ID" ] && echo "$ISSUE_TITLE" | grep -q "Challenge Error:"; then
-            CHALLENGE_NAME=$(echo "$ISSUE_TITLE" | sed 's/.*Challenge Error:\s*\([^(]*\).*/\1/' | sed 's/[[:space:]]*$//')
+          if [ -z "$CHALLENGE_ID" ] && grep -q "Challenge Error:" /tmp/issue_title.txt; then
+            CHALLENGE_NAME=$(grep -o "Challenge Error:\s*[^(]*" /tmp/issue_title.txt | sed 's/Challenge Error:\s*//' | sed 's/[[:space:]]*$//')
             echo "Challenge Name: $CHALLENGE_NAME"
             
             # Suche nach challenge.json mit diesem Titel
-            for challenge_dir in challenges/*/; do
-              if [ -f "$challenge_dir/challenge.json" ]; then
-                TITLE_IN_FILE=$(cat "$challenge_dir/challenge.json" | grep -o '"title":\s*"[^"]*"' | sed 's/"title":\s*"\([^"]*\)"/\1/')
-                if [ "$TITLE_IN_FILE" = "$CHALLENGE_NAME" ]; then
-                  CHALLENGE_ID=$(basename "$challenge_dir")
-                  echo "Challenge ID gefunden: $CHALLENGE_ID"
-                  break
+            if [ -n "$CHALLENGE_NAME" ]; then
+              for challenge_dir in challenges/*/; do
+                if [ -f "$challenge_dir/challenge.json" ]; then
+                  TITLE_IN_FILE=$(grep -o '"title":\s*"[^"]*"' "$challenge_dir/challenge.json" | sed 's/"title":\s*"\([^"]*\)"/\1/')
+                  if [ "$TITLE_IN_FILE" = "$CHALLENGE_NAME" ]; then
+                    CHALLENGE_ID=$(basename "$challenge_dir")
+                    echo "Challenge ID gefunden: $CHALLENGE_ID"
+                    break
+                  fi
                 fi
-              fi
-            done
+              done
+            fi
           fi
           
           # Pattern 3: Suche alle Challenges die als "reported" markiert sind
@@ -57,7 +60,7 @@ jobs:
             echo "Suche in reported Challenges..."
             for challenge_dir in challenges/*/; do
               if [ -f "$challenge_dir/challenge.json" ]; then
-                STATUS=$(cat "$challenge_dir/challenge.json" | grep -o '"status":\s*"[^"]*"' | sed 's/"status":\s*"\([^"]*\)"/\1/')
+                STATUS=$(grep -o '"status":\s*"[^"]*"' "$challenge_dir/challenge.json" | sed 's/"status":\s*"\([^"]*\)"/\1/')
                 if [ "$STATUS" = "reported" ]; then
                   CHALLENGE_ID=$(basename "$challenge_dir")
                   echo "Reported Challenge gefunden: $CHALLENGE_ID"
@@ -66,6 +69,9 @@ jobs:
               fi
             done
           fi
+          
+          # Cleanup
+          rm -f /tmp/issue_body.txt /tmp/issue_title.txt
           
           if [ -z "$CHALLENGE_ID" ]; then
             echo "Challenge ID nicht gefunden"
