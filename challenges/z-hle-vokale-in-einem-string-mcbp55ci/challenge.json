@@ -20,5 +20,6 @@
   "tests": "using System;\nusing System.Diagnostics;\n\npublic static class Tests {\n    public static void RunTests() {\n        Debug.Assert(Solution.CountVowels(\"Hallo Welt\") == 3);\n        Debug.Assert(Solution.CountVowels(\"Programmieren macht Spaß\") == 6);\n        Debug.Assert(Solution.CountVowels(\"XYZ\") == 0);\n        Debug.Assert(Solution.CountVowels(\"AEIOUaeiou\") == 10);\n        Debug.Assert(Solution.CountVowels(\"\") == 0);\n\n        Console.WriteLine(\"Alle Tests erfolgreich bestanden.\");\n    }\n\n    public static void Main() {\n        RunTests();\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "ZhleVokaleInEinemString",
-  "functionName": "ZhleVokaleInEinemString"
+  "functionName": "ZhleVokaleInEinemString",
+  "lastUpdated": 1751006869.419229
 }

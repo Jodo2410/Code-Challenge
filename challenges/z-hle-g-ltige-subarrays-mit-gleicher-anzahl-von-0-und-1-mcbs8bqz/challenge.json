@@ -20,5 +20,6 @@
   "tests": "using System;\n\npublic static class Tests {\n    public static void RunAllTests() {\n        Test(new int[] {0, 1}, 1, \"Test 1\");\n        Test(new int[] {0, 1, 0}, 2, \"Test 2\");\n        Test(new int[] {0, 0, 1, 1, 0}, 4, \"Test 3\");\n        Test(new int[] {0, 1, 1, 0, 1, 0, 0}, 9, \"Test 4\");\n        Test(new int[] {}, 0, \"Test 5 - Leeres Array\");\n        Test(new int[] {1, 1, 1, 0, 0, 0, 1}, 6, \"Test 6\");\n    }\n\n    private static void Test(int[] input, int expected, string testName) {\n        int result = Solution.CountBalancedSubarrays(input);\n        if (result == expected) {\n            Console.WriteLine($\"[✔] {testName} bestanden\");\n        } else {\n            Console.WriteLine($\"[✘] {testName} fehlgeschlagen: erwartet {expected}, erhalten {result}\");\n        }\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "ZhleGltigeSubarraysMitGleicherAnzahlVon0Und1",
-  "functionName": "ZhleGltigeSubarraysMitGleicherAnzahlVon0Und1"
+  "functionName": "ZhleGltigeSubarraysMitGleicherAnzahlVon0Und1",
+  "lastUpdated": 1751006869.408588
 }
