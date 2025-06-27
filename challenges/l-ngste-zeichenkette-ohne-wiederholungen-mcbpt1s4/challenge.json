@@ -14,12 +14,15 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-25T08:51:12.136Z",
-  "status": "approved",
+  "status": "reported",
   "starterCode": "using System;\nusing System.Collections.Generic;\n\npublic static class Solution {\n    public static int LengthOfLongestSubstring(string s) {\n        // TODO: Implementiere die Lösung\n        return 0;\n    }\n}",
   "solution": "using System;\nusing System.Collections.Generic;\n\npublic static class Solution {\n    public static int LengthOfLongestSubstring(string s) {\n        int maxLen = 0;\n        int left = 0;\n        HashSet<char> set = new HashSet<char>();\n\n        for (int right = 0; right < s.Length; right++) {\n            while (set.Contains(s[right])) {\n                set.Remove(s[left]);\n                left++;\n            }\n            set.Add(s[right]);\n            maxLen = Math.Max(maxLen, right - left + 1);\n        }\n\n        return maxLen;\n    }\n}",
   "tests": "using System;\n\npublic static class Tests {\n    public static void RunAllTests() {\n        int passed = 0;\n        int total = 5;\n\n        if (Solution.LengthOfLongestSubstring(\"abcabcbb\") == 3) {\n            Console.WriteLine(\"Test 1 bestanden ✓ (\"abc\")\");\n            passed++;\n        } else {\n            Console.WriteLine(\"Test 1 fehlgeschlagen ✗\");\n        }\n\n        if (Solution.LengthOfLongestSubstring(\"bbbbb\") == 1) {\n            Console.WriteLine(\"Test 2 bestanden ✓ (\"b\")\");\n            passed++;\n        } else {\n            Console.WriteLine(\"Test 2 fehlgeschlagen ✗\");\n        }\n\n        if (Solution.LengthOfLongestSubstring(\"pwwkew\") == 3) {\n            Console.WriteLine(\"Test 3 bestanden ✓ (\"wke\")\");\n            passed++;\n        } else {\n            Console.WriteLine(\"Test 3 fehlgeschlagen ✗\");\n        }\n\n        if (Solution.LengthOfLongestSubstring(\"\") == 0) {\n            Console.WriteLine(\"Test 4 bestanden ✓ (leer)\");\n            passed++;\n        } else {\n            Console.WriteLine(\"Test 4 fehlgeschlagen ✗\");\n        }\n\n        if (Solution.LengthOfLongestSubstring(\"dvdf\") == 3) {\n            Console.WriteLine(\"Test 5 bestanden ✓ (\"vdf\")\");\n            passed++;\n        } else {\n            Console.WriteLine(\"Test 5 fehlgeschlagen ✗\");\n        }\n\n        Console.WriteLine($\"{passed}/{total} Tests bestanden.\");\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "LngsteZeichenketteOhneWiederholungen",
   "functionName": "LngsteZeichenketteOhneWiederholungen",
-  "lastUpdated": 1751006869.32532
+  "lastUpdated": 1751006869.32532,
+  "reportedIssueNumber": 77,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/77",
+  "isHidden": true
 }
