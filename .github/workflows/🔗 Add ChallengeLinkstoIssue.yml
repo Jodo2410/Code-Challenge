@@ -23,7 +23,7 @@ jobs:
           ISSUE_BODY="${{ github.event.issue.body }}"
           ISSUE_TITLE="${{ github.event.issue.title }}"
           
-          echo "🔍 Suche Challenge ID..."
+          echo "Suche Challenge ID..."
           
           CHALLENGE_ID=""
           
@@ -37,7 +37,7 @@ jobs:
           # Pattern 2: Aus Issue-Titel extrahieren
           if [ -z "$CHALLENGE_ID" ] && echo "$ISSUE_TITLE" | grep -q "Challenge Error:"; then
             CHALLENGE_NAME=$(echo "$ISSUE_TITLE" | sed 's/.*Challenge Error:\s*\([^(]*\).*/\1/' | sed 's/[[:space:]]*$//')
-            echo "📝 Challenge Name: $CHALLENGE_NAME"
+            echo "Challenge Name: $CHALLENGE_NAME"
             
             # Suche nach challenge.json mit diesem Titel
             for challenge_dir in challenges/*/; do
@@ -45,7 +45,7 @@ jobs:
                 TITLE_IN_FILE=$(cat "$challenge_dir/challenge.json" | grep -o '"title":\s*"[^"]*"' | sed 's/"title":\s*"\([^"]*\)"/\1/')
                 if [ "$TITLE_IN_FILE" = "$CHALLENGE_NAME" ]; then
                   CHALLENGE_ID=$(basename "$challenge_dir")
-                  echo "✅ Challenge ID gefunden: $CHALLENGE_ID"
+                  echo "Challenge ID gefunden: $CHALLENGE_ID"
                   break
                 fi
               fi
@@ -54,13 +54,13 @@ jobs:
           
           # Pattern 3: Suche alle Challenges die als "reported" markiert sind
           if [ -z "$CHALLENGE_ID" ]; then
-            echo "⚠️ Suche in reported Challenges..."
+            echo "Suche in reported Challenges..."
             for challenge_dir in challenges/*/; do
               if [ -f "$challenge_dir/challenge.json" ]; then
                 STATUS=$(cat "$challenge_dir/challenge.json" | grep -o '"status":\s*"[^"]*"' | sed 's/"status":\s*"\([^"]*\)"/\1/')
                 if [ "$STATUS" = "reported" ]; then
                   CHALLENGE_ID=$(basename "$challenge_dir")
-                  echo "✅ Reported Challenge gefunden: $CHALLENGE_ID"
+                  echo "Reported Challenge gefunden: $CHALLENGE_ID"
                   break
                 fi
               fi
@@ -68,10 +68,10 @@ jobs:
           fi
           
           if [ -z "$CHALLENGE_ID" ]; then
-            echo "❌ Challenge ID nicht gefunden"
+            echo "Challenge ID nicht gefunden"
             echo "challenge_found=false" >> $GITHUB_OUTPUT
           else
-            echo "🎯 Challenge ID: $CHALLENGE_ID"
+            echo "Challenge ID: $CHALLENGE_ID"
             echo "challenge_id=$CHALLENGE_ID" >> $GITHUB_OUTPUT
             echo "challenge_found=true" >> $GITHUB_OUTPUT
           fi
@@ -149,8 +149,8 @@ jobs:
               `| 📖 **Solution** | **[solution.${fileExt}](${repoUrl}/blob/main/challenges/${challengeId}/solution.${fileExt})** | Referenz-Lösung |`,
               '',
               '---',
-              '💡 **Tipp:** Verwende den VS Code Link um die Challenge direkt zu testen und zu reproduzieren!',
-              '🤖 *Automatisch hinzugefügt durch GitHub Actions*'
+              'Tipp: Verwende den VS Code Link um die Challenge direkt zu testen und zu reproduzieren!',
+              'Automatisch hinzugefuegt durch GitHub Actions'
             ].join('\n');
 
             await github.rest.issues.createComment({
@@ -192,17 +192,17 @@ jobs:
         with:
           script: |
             const body = [
-              '⚠️ **Challenge ID konnte nicht automatisch ermittelt werden**',
+              'Challenge ID konnte nicht automatisch ermittelt werden',
               '',
-              'Um die Challenge-Links hinzuzufügen, bitte folgende Informationen ergänzen:',
+              'Um die Challenge-Links hinzuzufuegen, bitte folgende Informationen ergaenzen:',
               '',
               '1. **Challenge ID** in der Beschreibung: `Challenge ID: your-challenge-id`',
               '2. **Challenge Titel** im Issue-Titel: `Challenge Error: Your Challenge Title`',
               '',
-              'Dann können die Links automatisch hinzugefügt werden.',
+              'Dann koennen die Links automatisch hinzugefuegt werden.',
               '',
               '---',
-              '🤖 *Automatischer Check durch GitHub Actions*'
+              'Automatischer Check durch GitHub Actions'
             ].join('\n');
 
             await github.rest.issues.createComment({
@@ -225,22 +225,22 @@ jobs:
             const repoUrl = context.payload.repository.html_url;
             
             const body = [
-              '## 🎯 Challenge-bezogenes Issue erkannt',
+              '## Challenge-bezogenes Issue erkannt',
               '',
-              'Es sieht so aus, als würde sich dieses Issue auf eine Challenge beziehen.',
+              'Es sieht so aus, als wuerde sich dieses Issue auf eine Challenge beziehen.',
               '',
-              '### 📋 Für automatische Links:',
-              'Füge das Label `challenge-error` hinzu und stelle sicher, dass die **Challenge ID** in der Beschreibung steht:',
+              '### Fuer automatische Links:',
+              'Fuege das Label `challenge-error` hinzu und stelle sicher, dass die **Challenge ID** in der Beschreibung steht:',
               '```',
               'Challenge ID: your-challenge-id',
               '```',
               '',
-              '### 🔗 Allgemeine Links:',
-              `- **[📁 Alle Challenges](${repoUrl}/tree/main/challenges)** - Repository durchsuchen`,
-              '- **[🎯 VS Code Extension](vscode://command/codingChallenges.showChallenges)** - Challenge Browser öffnen',
+              '### Allgemeine Links:',
+              `- **[Alle Challenges](${repoUrl}/tree/main/challenges)** - Repository durchsuchen`,
+              '- **[VS Code Extension](vscode://command/codingChallenges.showChallenges)** - Challenge Browser oeffnen',
               '',
               '---',
-              '🤖 *Automatische Erkennung durch GitHub Actions*'
+              'Automatische Erkennung durch GitHub Actions'
             ].join('\n');
 
             await github.rest.issues.createComment({
