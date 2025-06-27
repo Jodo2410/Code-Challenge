@@ -1,0 +1,243 @@
+name: 🔗 Add Challenge Links to Issue
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  add-links:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'challenge-error')
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔍 Extract Challenge ID
+        id: extract-challenge
+        run: |
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          
+          echo "🔍 Suche Challenge ID..."
+          
+          CHALLENGE_ID=""
+          
+          # Pattern 1: Challenge ID aus Issue Body
+          if echo "$ISSUE_BODY" | grep -q "Challenge.*ID.*:"; then
+            CHALLENGE_ID=$(echo "$ISSUE_BODY" | grep -o "Challenge.*ID.*:\s*\`[^`]*\`" | sed 's/.*`\([^`]*\)`.*/\1/')
+          elif echo "$ISSUE_BODY" | grep -q "ID.*:"; then
+            CHALLENGE_ID=$(echo "$ISSUE_BODY" | grep -o "ID.*:\s*\`[^`]*\`" | sed 's/.*`\([^`]*\)`.*/\1/')
+          fi
+          
+          # Pattern 2: Aus Issue-Titel extrahieren
+          if [ -z "$CHALLENGE_ID" ] && echo "$ISSUE_TITLE" | grep -q "Challenge Error:"; then
+            CHALLENGE_NAME=$(echo "$ISSUE_TITLE" | sed 's/.*Challenge Error:\s*\([^(]*\).*/\1/' | sed 's/[[:space:]]*$//')
+            echo "📝 Challenge Name: $CHALLENGE_NAME"
+            
+            # Suche nach challenge.json mit diesem Titel
+            for challenge_dir in challenges/*/; do
+              if [ -f "$challenge_dir/challenge.json" ]; then
+                TITLE_IN_FILE=$(cat "$challenge_dir/challenge.json" | grep -o '"title":\s*"[^"]*"' | sed 's/"title":\s*"\([^"]*\)"/\1/')
+                if [ "$TITLE_IN_FILE" = "$CHALLENGE_NAME" ]; then
+                  CHALLENGE_ID=$(basename "$challenge_dir")
+                  echo "✅ Challenge ID gefunden: $CHALLENGE_ID"
+                  break
+                fi
+              fi
+            done
+          fi
+          
+          # Pattern 3: Suche alle Challenges die als "reported" markiert sind
+          if [ -z "$CHALLENGE_ID" ]; then
+            echo "⚠️ Suche in reported Challenges..."
+            for challenge_dir in challenges/*/; do
+              if [ -f "$challenge_dir/challenge.json" ]; then
+                STATUS=$(cat "$challenge_dir/challenge.json" | grep -o '"status":\s*"[^"]*"' | sed 's/"status":\s*"\([^"]*\)"/\1/')
+                if [ "$STATUS" = "reported" ]; then
+                  CHALLENGE_ID=$(basename "$challenge_dir")
+                  echo "✅ Reported Challenge gefunden: $CHALLENGE_ID"
+                  break
+                fi
+              fi
+            done
+          fi
+          
+          if [ -z "$CHALLENGE_ID" ]; then
+            echo "❌ Challenge ID nicht gefunden"
+            echo "challenge_found=false" >> $GITHUB_OUTPUT
+          else
+            echo "🎯 Challenge ID: $CHALLENGE_ID"
+            echo "challenge_id=$CHALLENGE_ID" >> $GITHUB_OUTPUT
+            echo "challenge_found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📄 Get Challenge Info
+        id: challenge-info
+        if: steps.extract-challenge.outputs.challenge_found == 'true'
+        run: |
+          CHALLENGE_ID="${{ steps.extract-challenge.outputs.challenge_id }}"
+          CONFIG_FILE="challenges/$CHALLENGE_ID/challenge.json"
+          
+          if [ -f "$CONFIG_FILE" ]; then
+            TITLE=$(cat "$CONFIG_FILE" | grep -o '"title":\s*"[^"]*"' | sed 's/"title":\s*"\([^"]*\)"/\1/')
+            LANGUAGE=$(cat "$CONFIG_FILE" | grep -o '"language":\s*"[^"]*"' | sed 's/"language":\s*"\([^"]*\)"/\1/')
+            DIFFICULTY=$(cat "$CONFIG_FILE" | grep -o '"difficulty":\s*"[^"]*"' | sed 's/"difficulty":\s*"\([^"]*\)"/\1/')
+            
+            echo "title=$TITLE" >> $GITHUB_OUTPUT
+            echo "language=$LANGUAGE" >> $GITHUB_OUTPUT
+            echo "difficulty=$DIFFICULTY" >> $GITHUB_OUTPUT
+            echo "info_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "info_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔗 Add Challenge Links
+        if: steps.extract-challenge.outputs.challenge_found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const challengeId = '${{ steps.extract-challenge.outputs.challenge_id }}';
+            const repoUrl = context.payload.repository.html_url;
+            const title = '${{ steps.challenge-info.outputs.title }}' || 'Challenge';
+            const language = '${{ steps.challenge-info.outputs.language }}' || '';
+            const difficulty = '${{ steps.challenge-info.outputs.difficulty }}' || '';
+            
+            // Sprach-Icons
+            const languageIcons = {
+              'javascript': '🟨',
+              'python': '🐍', 
+              'java': '☕',
+              'csharp': '🔷',
+              'cpp': '⚙️',
+              'c': '🔧',
+              'go': '🐹'
+            };
+            
+            // Schwierigkeits-Icons
+            const difficultyIcons = {
+              'easy': '🟢',
+              'medium': '🟡', 
+              'hard': '🔴'
+            };
+            
+            const langIcon = languageIcons[language] || '💻';
+            const diffIcon = difficultyIcons[difficulty] || '⭐';
+            
+            const commentBody = `## 🔗 Challenge Quick Access
+
+**Challenge:** ${title}  
+**Details:** ${langIcon} ${language} • ${diffIcon} ${difficulty}  
+**ID:** \`${challengeId}\`
+
+### 📂 Links zur Challenge:
+
+| Action | Link | Beschreibung |
+|--------|------|--------------|
+| 📁 **GitHub** | **[Challenge in Repository öffnen](${repoUrl}/tree/main/challenges/${challengeId})** | Zeigt alle Challenge-Dateien im Browser |
+| 🎯 **VS Code** | **[In Extension laden](vscode://command/codingChallenges.loadChallengeById?${encodeURIComponent(JSON.stringify({challengeId: challengeId}))})** | Lädt Challenge direkt in VS Code Extension |
+| 📖 **README** | **[Dokumentation lesen](${repoUrl}/blob/main/challenges/${challengeId}/README.md)** | Challenge-Beschreibung und Anweisungen |
+| ⚙️ **Config** | **[challenge.json ansehen](${repoUrl}/blob/main/challenges/${challengeId}/challenge.json)** | Challenge-Konfiguration und Metadaten |
+
+### 🛠️ Entwickler-Links:
+
+| Datei | Link | Zweck |
+|-------|------|-------|
+| 📝 **Starter** | **[starter.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'}](${repoUrl}/blob/main/challenges/${challengeId}/starter.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'})** | User Code Template |
+| 🧪 **Tests** | **[tests.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'}](${repoUrl}/blob/main/challenges/${challengeId}/tests.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'})** | Test Framework |
+| 📖 **Solution** | **[solution.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'}](${repoUrl}/blob/main/challenges/${challengeId}/solution.${language === 'csharp' ? 'cs' : language === 'javascript' ? 'js' : language === 'python' ? 'py' : language === 'cpp' ? 'cpp' : language === 'c' ? 'c' : 'java'})** | Referenz-Lösung |
+
+---
+💡 **Tipp:** Verwende den VS Code Link um die Challenge direkt zu testen und zu reproduzieren!  
+🤖 *Automatisch hinzugefügt durch GitHub Actions*`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
+            
+            console.log('✅ Challenge-Links hinzugefügt');
+
+      - name: 🏷️ Add Helper Labels
+        if: steps.extract-challenge.outputs.challenge_found == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const challengeId = '${{ steps.extract-challenge.outputs.challenge_id }}';
+            const language = '${{ steps.challenge-info.outputs.language }}';
+            const difficulty = '${{ steps.challenge-info.outputs.difficulty }}';
+            
+            const labels = ['challenge-links-added'];
+            
+            if (language) labels.push(`language:${language}`);
+            if (difficulty) labels.push(`difficulty:${difficulty}`);
+            if (challengeId) labels.push(`challenge:${challengeId}`);
+            
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: labels
+            });
+            
+            console.log('✅ Labels hinzugefügt:', labels.join(', '));
+
+      - name: ❌ No Challenge Found
+        if: steps.extract-challenge.outputs.challenge_found == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ **Challenge ID konnte nicht automatisch ermittelt werden**
+
+Um die Challenge-Links hinzuzufügen, bitte folgende Informationen ergänzen:
+
+1. **Challenge ID** in der Beschreibung: \`Challenge ID: your-challenge-id\`
+2. **Challenge Titel** im Issue-Titel: \`Challenge Error: Your Challenge Title\`
+
+Dann können die Links automatisch hinzugefügt werden.
+
+---
+🤖 *Automatischer Check durch GitHub Actions*`
+            });
+
+  # Fallback für Issues ohne challenge-error Label
+  add-general-links:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.issue.labels.*.name, 'challenge-error') && (contains(github.event.issue.title, 'Challenge') || contains(github.event.issue.body, 'challenge'))"
+    
+    steps:
+      - name: 💬 General Challenge Help
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🎯 Challenge-bezogenes Issue erkannt
+
+Es sieht so aus, als würde sich dieses Issue auf eine Challenge beziehen.
+
+### 📋 Für automatische Links:
+Füge das Label \`challenge-error\` hinzu und stelle sicher, dass die **Challenge ID** in der Beschreibung steht:
+\`\`\`
+Challenge ID: your-challenge-id
+\`\`\`
+
+### 🔗 Allgemeine Links:
+- **[📁 Alle Challenges](${context.payload.repository.html_url}/tree/main/challenges)** - Repository durchsuchen
+- **[🎯 VS Code Extension](vscode://command/codingChallenges.showChallenges)** - Challenge Browser öffnen
+
+---
+🤖 *Automatische Erkennung durch GitHub Actions*`
+            });
