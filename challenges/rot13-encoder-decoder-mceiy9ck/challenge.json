@@ -1,0 +1,26 @@
+{
+  "id": "rot13-encoder-decoder-mceiy9ck",
+  "title": "ROT13 Encoder/Decoder",
+  "description": "### Einführung:\nROT13 ist ein einfacher Buchstabenersetzungsalgorithmus, der jeden Buchstaben im Alphabet um 13 Stellen verschiebt. Die Besonderheit: Zwei Anwendungen von ROT13 kehren den ursprünglichen Text zurück.\n\nBeispiel:\n- Eingabe: \"Hello\" → Ausgabe: \"Uryyb\"\n- Eingabe: \"Uryyb\" → Ausgabe: \"Hello\"\n\n### Aufgabe:\nSchreibe eine Methode `Rot13(string input)`, die jeden Buchstaben entsprechend ROT13 ersetzt. Nicht-Buchstaben (Zahlen, Leerzeichen, Satzzeichen) sollen unverändert bleiben.\n\n### Beispiele:\n```csharp\nRot13(\"Hello\") => \"Uryyb\"\nRot13(\"Uryyb\") => \"Hello\"\nRot13(\"1234\") => \"1234\"\n```",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "csharp",
+    "strings",
+    "rot13",
+    "text",
+    "encoding",
+    "decoder",
+    "einsteiger",
+    "easy"
+  ],
+  "author": "Jodo2410",
+  "createdAt": "2025-06-27T08:02:36.571Z",
+  "status": "approved",
+  "starterCode": "using System;\n\npublic static class Rot13Cipher\n{\n    public static string Rot13(string input)\n    {\n        // TODO: Implementiere die ROT13-Verschlüsselung\n        return \"\";\n    }\n}",
+  "solution": "using System;\n\npublic static class Rot13Cipher\n{\n    public static string Rot13(string input)\n    {\n        char Transform(char c)\n        {\n            if (char.IsLetter(c))\n            {\n                char offset = char.IsUpper(c) ? 'A' : 'a';\n                return (char)((((c - offset) + 13) % 26) + offset);\n            }\n            return c;\n        }\n\n        string result = \"\";\n        foreach (char c in input)\n        {\n            result += Transform(c);\n        }\n        return result;\n    }\n}",
+  "tests": "using System;\n\npublic static class Rot13Tests\n{\n    public static void RunAllTests()\n    {\n        int passed = 0;\n        int total = 4;\n        Console.WriteLine(\"=== ROT13 Tests ===\\n\");\n\n        if (Test(\"Test 1\", Rot13Cipher.Rot13(\"Hello\"), \"Uryyb\")) passed++;\n        if (Test(\"Test 2\", Rot13Cipher.Rot13(\"Uryyb\"), \"Hello\")) passed++;\n        if (Test(\"Test 3\", Rot13Cipher.Rot13(\"1234\"), \"1234\")) passed++;\n        if (Test(\"Test 4 - Double Encoding\", Rot13Cipher.Rot13(Rot13Cipher.Rot13(\"OpenAI\")), \"OpenAI\")) passed++;\n\n        Console.WriteLine($\"\\n{passed}/{total} Tests bestanden\");\n    }\n\n    private static bool Test(string name, string actual, string expected)\n    {\n        bool success = actual == expected;\n        Console.WriteLine(success\n            ? $\"[PASS] {name}\"\n            : $\"[FAIL] {name} | Erwartet: '{expected}', Erhalten: '{actual}'\");\n        return success;\n    }\n}",
+  "testClassName": "Tests",
+  "mainClassName": "Rot13Encoderdecoder",
+  "functionName": "Rot13Encoderdecoder"
+}
