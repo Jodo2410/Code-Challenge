@@ -1,6 +1,6 @@
 using System;
 
-public static class ContactManagerTests
+public static class Tests
 {
     public static void RunAllTests()
     {
