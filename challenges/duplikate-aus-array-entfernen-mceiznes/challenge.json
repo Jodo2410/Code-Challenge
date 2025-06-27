@@ -14,11 +14,15 @@
   ],
   "author": "Jodo2410",
   "createdAt": "2025-06-27T08:03:41.502Z",
-  "status": "approved",
+  "status": "reported",
   "starterCode": "using System;\n\npublic static class ArrayUtils\n{\n    public static int[] RemoveDuplicates(int[] input)\n    {\n        // TODO: Entferne doppelte Werte aus dem Array\n        return new int[0];\n    }\n}",
   "solution": "using System;\nusing System.Collections.Generic;\n\npublic static class ArrayUtils\n{\n    public static int[] RemoveDuplicates(int[] input)\n    {\n        HashSet<int> seen = new HashSet<int>();\n        List<int> result = new List<int>();\n\n        foreach (int number in input)\n        {\n            if (!seen.Contains(number))\n            {\n                seen.Add(number);\n                result.Add(number);\n            }\n        }\n\n        return result.ToArray();\n    }\n}",
   "tests": "using System;\n\npublic static class ArrayUtilsTests\n{\n    public static void RunAllTests()\n    {\n        int passed = 0;\n        int total = 3;\n        Console.WriteLine(\"=== Duplikate Entfernen Tests ===\\n\");\n\n        if (Test(\"Test 1\", ArrayUtils.RemoveDuplicates(new int[] { 1, 2, 2, 3, 1 }), new int[] { 1, 2, 3 })) passed++;\n        if (Test(\"Test 2\", ArrayUtils.RemoveDuplicates(new int[] { 4, 5, 4, 5, 4 }), new int[] { 4, 5 })) passed++;\n        if (Test(\"Test 3\", ArrayUtils.RemoveDuplicates(new int[] { 10 }), new int[] { 10 })) passed++;\n\n        Console.WriteLine($\"\\n{passed}/{total} Tests bestanden\");\n    }\n\n    private static bool Test(string name, int[] actual, int[] expected)\n    {\n        bool success = actual.Length == expected.Length;\n        for (int i = 0; i < actual.Length && success; i++)\n        {\n            if (actual[i] != expected[i]) success = false;\n        }\n\n        Console.WriteLine(success ? $\"[PASS] {name}\" : $\"[FAIL] {name} | Erwartet: [{string.Join(\", \", expected)}], Erhalten: [{string.Join(\", \", actual)}]\");\n        return success;\n    }\n}",
   "testClassName": "Tests",
   "mainClassName": "DuplikateAusArrayEntfernen",
-  "functionName": "DuplikateAusArrayEntfernen"
+  "functionName": "DuplikateAusArrayEntfernen",
+  "reportedIssueNumber": 96,
+  "reportedIssueUrl": "https://github.com/Jodo2410/Code-Challenge/issues/96",
+  "reportedAt": "2025-06-27T20:11:50.352Z",
+  "isHidden": true
 }
