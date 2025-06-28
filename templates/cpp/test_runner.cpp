@@ -146,4 +146,81 @@ int main() {
         } else if (duration.count() < 1000) {
             std::cout << "👍 Acceptable Performance (< 1s)" << std::endl;
         } else {
-            std::cout << "⚠️  Consider
+            std::cout << "⚠️  Consider optimization (> 1s)" << std::endl;
+        }
+        
+        std::cout << std::endl;
+        std::cout << "📋 Upload Checklist:" << std::endl;
+        std::cout << "   ✅ Alle Tests bestanden" << std::endl;
+        std::cout << "   ✅ Performance akzeptabel" << std::endl;
+        std::cout << "   ✅ Template-Struktur vollständig" << std::endl;
+        std::cout << "   📝 challenge-info.json ausfüllen" << std::endl;
+        std::cout << "   🚀 Bereit für Upload!" << std::endl;
+        
+        return 0;
+        
+    } catch (const std::runtime_error& ex) {
+        std::cerr << std::endl;
+        std::cerr << "💥 Runtime Fehler:" << std::endl;
+        std::cerr << "   " << ex.what() << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "🔧 Mögliche Ursachen:" << std::endl;
+        std::cerr << "   • Challenge.cpp nicht korrekt implementiert" << std::endl;
+        std::cerr << "   • Logik-Fehler in der solve() Funktion" << std::endl;
+        std::cerr << "   • Ungültige Eingabe-Behandlung" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "💡 Lösung: Implementierung in Challenge.cpp überprüfen" << std::endl;
+        
+        return 1;
+        
+    } catch (const std::logic_error& ex) {
+        std::cerr << std::endl;
+        std::cerr << "🧠 Logic Fehler:" << std::endl;
+        std::cerr << "   " << ex.what() << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "🔧 Mögliche Ursachen:" << std::endl;
+        std::cerr << "   • Falsche Algorithmus-Logik" << std::endl;
+        std::cerr << "   • Ungültige Parameter-Verwendung" << std::endl;
+        std::cerr << "   • Index-out-of-bounds" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "💡 Lösung: Algorithmus-Logik und Grenzfälle prüfen" << std::endl;
+        
+        return 1;
+        
+    } catch (const std::exception& ex) {
+        std::cerr << std::endl;
+        std::cerr << "💥 Unerwarteter Fehler:" << std::endl;
+        std::cerr << "   " << ex.what() << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "🔧 Mögliche Ursachen:" << std::endl;
+        std::cerr << "   • Template-Struktur beschädigt" << std::endl;
+        std::cerr << "   • Kompilierungs-/Linkfehler" << std::endl;
+        std::cerr << "   • System-spezifischer Fehler" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "💡 Lösung:" << std::endl;
+        std::cerr << "   1. 'make clean && make' ausführen" << std::endl;
+        std::cerr << "   2. Template neu laden falls Problem weiterhin besteht" << std::endl;
+        std::cerr << "   3. Challenge-Fehler melden falls Template defekt" << std::endl;
+        
+        return 1;
+        
+    } catch (...) {
+        std::cerr << std::endl;
+        std::cerr << "💥 Unbekannter kritischer Fehler!" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "🚨 Mögliche Ursachen:" << std::endl;
+        std::cerr << "   • Speicher-Zugriffsfehler (Segmentation Fault)" << std::endl;
+        std::cerr << "   • Unbehandelte System-Exception" << std::endl;
+        std::cerr << "   • Template schwer beschädigt" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "🆘 Notfall-Maßnahmen:" << std::endl;
+        std::cerr << "   1. Kompilierung mit Debug-Flags: 'make debug'" << std::endl;
+        std::cerr << "   2. Debugging mit GDB: 'gdb ./test_runner'" << std::endl;
+        std::cerr << "   3. Template komplett neu laden" << std::endl;
+        std::cerr << "   4. Challenge-Fehler als kritisch melden" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "📞 Bei wiederholten Problemen: Template-Fehler melden!" << std::endl;
+        
+        return 2;
+    }
+}
