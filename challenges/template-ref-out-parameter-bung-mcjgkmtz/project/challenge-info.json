@@ -1,0 +1,10 @@
+{
+  "title": "Ref/Out Parameter-Übung",
+  "description": "Arbeite mit ref und out Parametern",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": ["ref", "out", "parameters"],
+  "author": "C# Lern-System",
+  "version": "2.0",
+  "templateCompliant": true
+}
