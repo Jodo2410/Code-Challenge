@@ -1,0 +1,24 @@
+{
+  "id": "template-ref-out-parameter-bung-mcjgkmtz",
+  "title": "Ref/Out Parameter-Übung",
+  "description": "Arbeite mit ref und out Parametern",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": [
+    "ref",
+    "out",
+    "parameters"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T18:54:52.055Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 66,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.82\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 12: Ref/Out Parameter-Übung Tests\r\n==================================================\r\n  ❌ Swap positive Zahlen: Implementiere SwapValues\r\n  ❌ Swap negative Zahlen: Implementiere SwapValues\r\n  ❌ Swap mit Null: Implementiere SwapValues\r\n  ❌ Swap gleiche Zahlen: Implementiere SwapValues\r\n  ❌ TryParse gültige Zahl: Implementiere TryParseAdvanced\r\n  ❌ TryParse ungültige Zahl: Implementiere TryParseAdvanced\r\n  ❌ TryParse leerer String: Implementiere TryParseAdvanced\r\n  ❌ TryParse null String: Implementiere TryParseAdvanced\r\n  ❌ Solve Methode: Implementiere SwapValues\r\n\n0/9 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
