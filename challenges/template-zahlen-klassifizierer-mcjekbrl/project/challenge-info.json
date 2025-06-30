@@ -1,0 +1,18 @@
+{
+  "title": "Zahlen-Klassifizierer",
+  "description": "Klassifiziere Zahlen als positiv, negativ oder null. Lerne if-else Verzweigungen und grundlegende Logik.",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": ["conditionals", "basics", "if-else", "logic"],
+  "author": "C# Lern-System",
+  "version": "1.0",
+  "templateCompliant": true,
+  "learningObjectives": [
+    "if-else Verzweigungen verstehen",
+    "Vergleichsoperatoren verwenden",
+    "String-Rückgaben implementieren",
+    "Einfache Logik umsetzen"
+  ],
+  "estimatedTime": "15-30 Minuten",
+  "prerequisites": ["Grundlagen von C#", "Variablen und Datentypen"]
+}

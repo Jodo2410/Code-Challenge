@@ -1,0 +1,25 @@
+{
+  "id": "template-zahlen-klassifizierer-mcjekbrl",
+  "title": "Zahlen-Klassifizierer",
+  "description": "Klassifiziere Zahlen als positiv, negativ oder null. Lerne if-else Verzweigungen und grundlegende Logik.",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "conditionals",
+    "basics",
+    "if-else",
+    "logic"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T17:58:38.481Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 66,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.83\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 1: Zahlen-Klassifizierer Tests\r\n==================================================\r\n  ❌ Positive Zahl: Implementiere ClassifyNumber\r\n  ❌ Negative Zahl: Implementiere ClassifyNumber\r\n  ❌ Null: Implementiere ClassifyNumber\r\n  ❌ Gemischtes Array: Implementiere ClassifyNumber\r\n  ✅ Leeres Array\r\n  ❌ Einzelne positive Zahl: Implementiere ClassifyNumber\r\n  ❌ Einzelne negative Zahl: Implementiere ClassifyNumber\r\n\n1/7 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
