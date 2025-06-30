@@ -1,0 +1,24 @@
+{
+  "id": "template-bankkonto-system-mcjh3u2y",
+  "title": "Bankkonto-System",
+  "description": "Implementiere ein einfaches Bankkonto",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": [
+    "oop",
+    "encapsulation",
+    "banking"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T19:09:47.914Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 62,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.81\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 17: Bankkonto-System Tests\r\n==================================================\r\n  ❌ Konto-Erstellung ohne Anfangssaldo: Implementiere BankAccount Konstruktor\r\n  ❌ Konto mit Anfangssaldo: Implementiere BankAccount Konstruktor\r\n  ❌ Geld einzahlen: Implementiere BankAccount Konstruktor\r\n  ❌ Erfolgreiches Abheben: Implementiere BankAccount Konstruktor\r\n  ❌ Abhebung bei unzureichendem Saldo: Implementiere BankAccount Konstruktor\r\n  ❌ Negative Einzahlung: Implementiere BankAccount Konstruktor\r\n  ❌ Negative Abhebung: Implementiere BankAccount Konstruktor\r\n  ❌ Mehrere Transaktionen: Implementiere BankAccount Konstruktor\r\n  ❌ Konto-Methoden sind korrekt: Implementiere BankAccount Konstruktor\r\n  ❌ ToString Methode: Implementiere BankAccount Konstruktor\r\n  ❌ Solve Methode: Solve sollte korrekten Endsaldo 1300 zurückgeben. Erwartet: 1300, Erhalten: -1\r\n  ❌ Leere Kontonummer: Implementiere BankAccount Konstruktor\r\n  ❌ Große Beträge: Implementiere BankAccount Konstruktor\r\n  ❌ Dezimal-Präzision: Implementiere BankAccount Konstruktor\r\n\n0/14 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
