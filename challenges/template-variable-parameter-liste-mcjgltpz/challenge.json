@@ -1,0 +1,24 @@
+{
+  "id": "template-variable-parameter-liste-mcjgltpz",
+  "title": "Variable Parameter-Liste",
+  "description": "Nutze params für variable Argumentanzahl",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": [
+    "params",
+    "variable-args",
+    "methods"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T18:55:47.639Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 66,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.82\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 13: Variable Parameter-Liste Tests\r\n==================================================\r\n  ❌ Durchschnitt mehrere Werte: Implementiere CalculateAverage\r\n  ❌ Durchschnitt einzelner Wert: Implementiere CalculateAverage\r\n  ❌ Durchschnitt keine Werte: Implementiere CalculateAverage\r\n  ❌ Durchschnitt als Array: Implementiere CalculateAverage\r\n  ❌ Durchschnitt Dezimalzahlen: Implementiere CalculateAverage\r\n  ❌ Durchschnitt negative Zahlen: Implementiere CalculateAverage\r\n  ❌ FindMax mehrere Werte: Implementiere FindMax\r\n  ❌ FindMax einzelner Wert: Implementiere FindMax\r\n  ❌ FindMax leer wirft Exception: Implementiere FindMax\r\n  ❌ Solve Methode: Implementiere CalculateAverage\r\n\n0/10 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
