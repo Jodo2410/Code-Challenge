@@ -1,0 +1,26 @@
+{
+  "id": "template-sum-of-positive-numbers-mciu9hse",
+  "title": "Sum of Positive Numbers",
+  "description": "Berechne die Summe aller positiven Zahlen in einem Vektor. Negative Zahlen und Null werden ignoriert. Beispiel: [1, -4, 7, 12] → 20",
+  "difficulty": "easy",
+  "language": "cpp",
+  "tags": [
+    "arrays",
+    "math",
+    "basic",
+    "loops",
+    "conditionals"
+  ],
+  "author": "Template-Generator",
+  "createdAt": "2025-06-30T08:30:20.750Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 49,
+  "buildInfo": {
+    "canBuild": false,
+    "testsPass": false,
+    "buildOutput": "Der Befehl \"make\" ist entweder falsch geschrieben oder\r\nkonnte nicht gefunden werden.\r\n",
+    "testOutput": ""
+  }
+}
