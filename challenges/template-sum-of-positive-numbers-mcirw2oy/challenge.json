@@ -1,0 +1,26 @@
+{
+  "id": "template-sum-of-positive-numbers-mcirw2oy",
+  "title": "Sum of Positive Numbers",
+  "description": "Berechne die Summe aller positiven Zahlen in einem Vektor. Negative Zahlen und Null werden ignoriert. Beispiel: [1, -4, 7, 12] → 20",
+  "difficulty": "easy",
+  "language": "cpp",
+  "tags": [
+    "arrays",
+    "math",
+    "basic",
+    "loops",
+    "conditionals"
+  ],
+  "author": "Template-Generator",
+  "createdAt": "2025-06-30T07:23:55.426Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.0",
+  "validationScore": 49,
+  "buildInfo": {
+    "canBuild": false,
+    "testsPass": false,
+    "buildOutput": "\\033[1;33m🧹 Räume Build-Artefakte auf...\\033[0m \n\\033[0;32m✅ build/ Ordner entfernt\\033[0m \n\\033[0;32m✅ Aufgeräumt!\\033[0m \n\\033[0;36m📁 Erstelle Build-Verzeichnis: build\\033[0m \n\\033[0;36m🔧 Kompiliere test_runner.cpp → build/test_runner.o\\033[0m \ng++ -std=c++17 -Wall -Wextra -O2 -I. -MMD -MP -c test_runner.cpp -o build/test_runner.o\n\\033[0;36m🔧 Kompiliere Challenge.cpp → build/Challenge.o\\033[0m \ng++ -std=c++17 -Wall -Wextra -O2 -I. -MMD -MP -c Challenge.cpp -o build/Challenge.o\n\\033[0;36m🔧 Kompiliere Tests.cpp → build/Tests.o\\033[0m \ng++ -std=c++17 -Wall -Wextra -O2 -I. -MMD -MP -c Tests.cpp -o build/Tests.o\nChallenge.cpp: In static member function 'static int Challenge::solve(const std::vector<int>&)':\nChallenge.cpp:18:1: warning: no return statement in function returning non-void [-Wreturn-type]\n   18 | }\n      | ^\nChallenge.cpp:14:46: warning: unused parameter 'input' [-Wunused-parameter]\n   14 | int Challenge::solve(const std::vector<int>& input) {\n      |                      ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~\ntest_runner.cpp: In function 'void runQuickSelfTest()':\ntest_runner.cpp:100:39: error: 'isValid' is not a member of 'Challenge'\n  100 |         bool validResult = Challenge::isValid(42);\n      |                                       ^~~~~~~\nmake: *** [Makefile:55: build/test_runner.o] Error 1\nmake: *** Waiting for unfinished jobs....\n",
+    "testOutput": ""
+  }
+}
