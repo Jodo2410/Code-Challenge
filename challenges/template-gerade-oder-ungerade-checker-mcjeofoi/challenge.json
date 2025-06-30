@@ -1,0 +1,24 @@
+{
+  "id": "template-gerade-oder-ungerade-checker-mcjeofoi",
+  "title": "Gerade oder Ungerade Checker",
+  "description": "Bestimme ob eine Zahl gerade oder ungerade ist",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "modulo",
+    "conditionals",
+    "basics"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T18:01:50.178Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 66,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.83\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 2: Gerade oder Ungerade Tests\r\n==================================================\r\n  ❌ Positive gerade Zahl: Implementiere IsEven\r\n  ❌ Positive ungerade Zahl: Implementiere IsEven\r\n  ❌ Negative gerade Zahl: Implementiere IsEven\r\n  ❌ Negative ungerade Zahl: Implementiere IsEven\r\n  ❌ Null ist gerade: Implementiere IsEven\r\n  ❌ Gemischtes Array: Implementiere IsEven\r\n  ✅ Leeres Array\r\n  ❌ Nur gerade Zahlen: Implementiere IsEven\r\n  ❌ Nur ungerade Zahlen: Implementiere IsEven\r\n\n1/9 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
