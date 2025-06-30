@@ -1,0 +1,10 @@
+{
+  "title": "Bankkonto-System",
+  "description": "Implementiere ein einfaches Bankkonto",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": ["oop", "encapsulation", "banking"],
+  "author": "C# Lern-System",
+  "version": "2.0",
+  "templateCompliant": true
+}
