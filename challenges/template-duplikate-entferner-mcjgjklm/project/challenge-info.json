@@ -1,0 +1,10 @@
+{
+  "title": "Duplikate-Entferner",
+  "description": "Entferne Duplikate aus einem Array",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": ["arrays", "duplicates", "lists"],
+  "author": "C# Lern-System",
+  "version": "2.0",
+  "templateCompliant": true
+}
