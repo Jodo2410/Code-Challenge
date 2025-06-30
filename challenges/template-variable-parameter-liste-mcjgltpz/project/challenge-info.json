@@ -1,0 +1,10 @@
+{
+  "title": "Variable Parameter-Liste",
+  "description": "Nutze params für variable Argumentanzahl",
+  "difficulty": "medium",
+  "language": "csharp",
+  "tags": ["params", "variable-args", "methods"],
+  "author": "C# Lern-System",
+  "version": "2.0",
+  "templateCompliant": true
+}
