@@ -35,25 +35,10 @@ public:
      * @return Ergebnis (Typ anpassen je nach Challenge)
      */
     static int solve(const std::vector<int>& input);
-    
-    /**
-     * Hilfsfunktion (optional)
-     * TODO: Füge weitere Hilfsfunktionen hinzu falls benötigt
-     */
-    static bool isValid(int value);
-    
-    /**
-     * Weitere Hilfsfunktionen (Beispiele)
-     */
-    static std::vector<int> processInput(const std::vector<int>& input);
-    static void printResult(int result);
+
     
 private:
-    /**
-     * Private Hilfsfunktionen
-     */
-    static int calculateSum(const std::vector<int>& data);
-    static bool validateInput(const std::vector<int>& input);
+    // --
 };
 
 #endif // CHALLENGE_H
