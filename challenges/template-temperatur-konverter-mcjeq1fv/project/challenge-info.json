@@ -1,0 +1,10 @@
+{
+  "title": "Temperatur-Konverter",
+  "description": "Konvertiere zwischen Celsius und Fahrenheit",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": ["math", "calculations", "methods"],
+  "author": "C# Lern-System",
+  "version": "2.0",
+  "templateCompliant": true
+}

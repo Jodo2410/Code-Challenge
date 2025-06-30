@@ -1,0 +1,24 @@
+{
+  "id": "template-temperatur-konverter-mcjeq1fv",
+  "title": "Temperatur-Konverter",
+  "description": "Konvertiere zwischen Celsius und Fahrenheit",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "math",
+    "calculations",
+    "methods"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T18:03:05.035Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 64,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.83\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 3: Temperatur-Konverter Tests\r\n==================================================\r\n  ❌ Celsius zu Fahrenheit (Gefrierpunkt): Implementiere CelsiusToFahrenheit\r\n  ❌ Celsius zu Fahrenheit (Siedepunkt): Implementiere CelsiusToFahrenheit\r\n  ❌ Fahrenheit zu Celsius (Gefrierpunkt): Implementiere FahrenheitToCelsius\r\n  ❌ Fahrenheit zu Celsius (Siedepunkt): Implementiere FahrenheitToCelsius\r\n  ❌ Absolute Zero Celsius: Implementiere CelsiusToFahrenheit\r\n  ❌ Negative Temperaturen: Implementiere CelsiusToFahrenheit\r\n  ❌ Raumtemperatur: Implementiere FahrenheitToCelsius\r\n  ❌ Solve Methode: Implementiere CelsiusToFahrenheit\r\n\n0/8 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
