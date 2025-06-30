@@ -1,0 +1,24 @@
+{
+  "id": "template-string-l-ngen-validator-mcjev5x7",
+  "title": "String-Längen-Validator",
+  "description": "Validiere Strings nach Längen-Kriterien",
+  "difficulty": "easy",
+  "language": "csharp",
+  "tags": [
+    "strings",
+    "validation",
+    "length"
+  ],
+  "author": "C# Lern-System",
+  "createdAt": "2025-06-30T18:07:04.123Z",
+  "status": "pending",
+  "type": "template-project",
+  "templateVersion": "2.1",
+  "validationScore": 66,
+  "buildInfo": {
+    "canBuild": true,
+    "testsPass": false,
+    "buildOutput": "  Wiederherzustellende Projekte werden ermittelt...\r\n  Alle Projekte sind für die Wiederherstellung auf dem neuesten Stand.\r\n  ChallengeTemplate -> c:\\Users\\Jonas\\coding-challenges\\challenges\\.vscode\\NewChallange\\bin\\Debug\\net8.0\\ChallengeTemplate.dll\r\n\r\nDer Buildvorgang wurde erfolgreich ausgeführt.\r\n    0 Warnung(en)\r\n    0 Fehler\r\n\r\nVerstrichene Zeit 00:00:00.83\r\n",
+    "testOutput": "🎯 Challenge Template - Test Runner\r\n🧪 Challenge 4: String-Längen-Validator Tests\r\n==================================================\r\n  ❌ Gültige Länge: Implementiere IsValidLength\r\n  ❌ Zu kurz: Implementiere IsValidLength\r\n  ❌ Zu lang: Implementiere IsValidLength\r\n  ❌ Exakte Grenzen (min): Implementiere IsValidLength\r\n  ❌ Exakte Grenzen (max): Implementiere IsValidLength\r\n  ❌ Null String: Implementiere IsValidLength\r\n  ❌ Leerer String (erlaubt): Implementiere IsValidLength\r\n  ❌ Leerer String (nicht erlaubt): Implementiere IsValidLength\r\n  ❌ Whitespace String: Implementiere IsValidLength\r\n  ❌ Einzelnes Zeichen: Implementiere IsValidLength\r\n  ❌ Solve Methode: Implementiere IsValidLength\r\n\n0/11 Tests bestanden\r\n❌ Tests fehlgeschlagen.\r\n"
+  }
+}
