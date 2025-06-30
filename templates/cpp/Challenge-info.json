@@ -1,0 +1,10 @@
+{
+  "title": "Deine Challenge",
+  "description": "Beschreibe hier deine Challenge",
+  "difficulty": "easy",
+  "language": "cpp",
+  "tags": ["template", "todo"],
+  "author": "",
+  "version": "2.0",
+  "templateCompliant": true
+}
