@@ -9,17 +9,18 @@ namespace ChallengeTemplate
 
         public static void RunAllTests()
         {
-            Console.WriteLine("🧪 Challenge 6: Array-Summierer Tests");
+            Console.WriteLine("🧪 Challenge 5: Einfacher Taschenrechner Tests");
             Console.WriteLine(new string('=', 50));
 
-            TestSimpleSum();
-            TestMixedNumbers();
-            TestSingleElement();
-            TestEmptyArray();
-            TestNullArray();
+            TestAddition();
+            TestSubtraction();
+            TestMultiplication();
+            TestDivision();
+            TestDivisionByZero();
+            TestInvalidOperation();
             TestNegativeNumbers();
-            TestZeros();
-            TestLargeNumbers();
+            TestDecimals();
+            TestSolveMethod();
 
             Console.WriteLine($"\n{testsPassed}/{totalTests} Tests bestanden");
             
@@ -34,67 +35,93 @@ namespace ChallengeTemplate
             }
         }
 
-        private static void TestSimpleSum()
+        private static void TestAddition()
         {
-            Test("Einfache Summe", () => {
-                var result = Challenge.SumArray(new int[] { 1, 2, 3, 4, 5 });
-                AssertEqual(15, result, "1+2+3+4+5 sollte 15 sein");
+            Test("Addition", () => {
+                var result = Challenge.Calculate(10, 5, '+');
+                AssertEqual(15.0, result, "10 + 5 sollte 15 sein");
             });
         }
 
-        private static void TestMixedNumbers()
+        private static void TestSubtraction()
         {
-            Test("Gemischte Zahlen", () => {
-                var result = Challenge.SumArray(new int[] { -1, 1, -2, 2 });
-                AssertEqual(0, result, "-1+1-2+2 sollte 0 sein");
+            Test("Subtraktion", () => {
+                var result = Challenge.Calculate(10, 3, '-');
+                AssertEqual(7.0, result, "10 - 3 sollte 7 sein");
             });
         }
 
-        private static void TestSingleElement()
+        private static void TestMultiplication()
         {
-            Test("Einzelnes Element", () => {
-                var result = Challenge.SumArray(new int[] { 42 });
-                AssertEqual(42, result, "Array mit einem Element sollte das Element zurückgeben");
+            Test("Multiplikation", () => {
+                var result = Challenge.Calculate(4, 6, '*');
+                AssertEqual(24.0, result, "4 * 6 sollte 24 sein");
             });
         }
 
-        private static void TestEmptyArray()
+        private static void TestDivision()
         {
-            Test("Leeres Array", () => {
-                var result = Challenge.SumArray(new int[] { });
-                AssertEqual(0, result, "Leeres Array sollte 0 ergeben");
+            Test("Division", () => {
+                var result = Challenge.Calculate(15, 3, '/');
+                AssertEqual(5.0, result, "15 / 3 sollte 5 sein");
             });
         }
 
-        private static void TestNullArray()
+        private static void TestDivisionByZero()
         {
-            Test("Null Array", () => {
-                var result = Challenge.SumArray(null);
-                AssertEqual(0, result, "Null Array sollte 0 ergeben");
+            Test("Division durch Null", () => {
+                try
+                {
+                    Challenge.Calculate(10, 0, '/');
+                    throw new Exception("Expected exception was not thrown");
+                }
+                catch (DivideByZeroException)
+                {
+                    // Erwartet
+                }
+                catch (ArgumentException)
+                {
+                    // Auch akzeptabel
+                }
+            });
+        }
+
+        private static void TestInvalidOperation()
+        {
+            Test("Ungültiger Operator", () => {
+                try
+                {
+                    Challenge.Calculate(5, 2, '%');
+                    throw new Exception("Expected exception was not thrown");
+                }
+                catch (ArgumentException)
+                {
+                    // Erwartet
+                }
             });
         }
 
         private static void TestNegativeNumbers()
         {
-            Test("Nur negative Zahlen", () => {
-                var result = Challenge.SumArray(new int[] { -1, -2, -3 });
-                AssertEqual(-6, result, "-1-2-3 sollte -6 sein");
+            Test("Negative Zahlen", () => {
+                var result = Challenge.Calculate(-5, 3, '+');
+                AssertEqual(-2.0, result, "-5 + 3 sollte -2 sein");
             });
         }
 
-        private static void TestZeros()
+        private static void TestDecimals()
         {
-            Test("Array mit Nullen", () => {
-                var result = Challenge.SumArray(new int[] { 0, 0, 0, 5 });
-                AssertEqual(5, result, "0+0+0+5 sollte 5 sein");
+            Test("Dezimalzahlen", () => {
+                var result = Challenge.Calculate(7.5, 2.5, '*');
+                AssertEqual(18.75, result, "7.5 * 2.5 sollte 18.75 sein");
             });
         }
 
-        private static void TestLargeNumbers()
+        private static void TestSolveMethod()
         {
-            Test("Große Zahlen", () => {
-                var result = Challenge.SumArray(new int[] { 1000, 2000, 3000 });
-                AssertEqual(6000, result, "1000+2000+3000 sollte 6000 sein");
+            Test("Solve Methode", () => {
+                var result = Challenge.Solve(new int[] { 10, 5, 0 }); // 0 = Addition
+                AssertEqual(15, result, "10 + 5 sollte 15 ergeben");
             });
         }
 
