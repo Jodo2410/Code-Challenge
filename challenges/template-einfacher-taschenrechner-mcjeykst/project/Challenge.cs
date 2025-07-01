@@ -1,5 +1,4 @@
-### 💻 **Challenge.cs** (Leere Vorlage)
-```csharp
+
 using System;
 
 namespace ChallengeTemplate
