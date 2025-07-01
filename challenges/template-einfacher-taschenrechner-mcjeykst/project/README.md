@@ -1,16 +1,19 @@
-# 🔷 Challenge 2: Gerade oder Ungerade Checker
+# 🔷 Challenge 5: Einfacher Taschenrechner
 
 ## 🎯 Ziel
-Lerne den Modulo-Operator (%) und boolean-Rückgaben.
+Lerne switch-Statements und Grundrechenarten.
 
 ## 📝 Aufgabe
-Implementiere eine Methode `IsEven(int number)`, die prüft ob eine Zahl gerade ist:
-- Gerade Zahlen → true
-- Ungerade Zahlen → false
+Implementiere eine Methode `Calculate(double a, double b, char operation)`:
+- Unterstützt: +, -, *, /
+- Behandelt Division durch Null
+- Wirft Exception bei unbekannten Operatoren
 
 ## 🧪 Beispiele
 ```csharp
-IsEven(4)   // → true (gerade)
-IsEven(7)   // → false (ungerade)
-IsEven(0)   // → true (gerade)
-IsEven(-2)  // → true (gerade)
+Calculate(10, 5, '+')   // → 15.0
+Calculate(10, 3, '-')   // → 7.0
+Calculate(4, 6, '*')    // → 24.0
+Calculate(15, 3, '/')   // → 5.0
+Calculate(10, 0, '/')   // → Exception
+Calculate(5, 2, '%')    // → Exception
