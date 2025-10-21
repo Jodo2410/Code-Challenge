@@ -15,9 +15,9 @@ namespace ChallengeTemplate
         /// <returns>Temperatur in Fahrenheit</returns>
         public static double CelsiusToFahrenheit(double celsius)
         {
-            
             // Formel: F = C × 9/5 + 32
             // Implementierung hier
+            throw new NotImplementedException("Implementiere CelsiusToFahrenheit");
         }
         
         /// <summary>
@@ -27,9 +27,9 @@ namespace ChallengeTemplate
         /// <returns>Temperatur in Celsius</returns>
         public static double FahrenheitToCelsius(double fahrenheit)
         {
-            
             // Formel: C = (F - 32) × 5/9
             // Implementierung hier
+            throw new NotImplementedException("Implementiere FahrenheitToCelsius");
         }
         
         /// <summary>

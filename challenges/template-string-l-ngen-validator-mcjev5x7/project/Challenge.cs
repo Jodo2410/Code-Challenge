@@ -17,9 +17,9 @@ namespace ChallengeTemplate
         /// <returns>true wenn Länge zwischen min und max liegt</returns>
         public static bool IsValidLength(string text, int minLength, int maxLength)
         {
-            
             // Berücksichtige null-Werte und empty strings
             // Implementierung hier
+            throw new NotImplementedException("Implementiere IsValidLength");
         }
         
         /// <summary>

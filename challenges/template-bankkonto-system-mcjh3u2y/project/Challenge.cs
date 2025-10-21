@@ -34,9 +34,9 @@ namespace ChallengeTemplate
         /// </summary>
         /// <returns>Die Kontonummer</returns>
         public string GetAccountNumber()
-        { 
-            
+        {
             // Implementierung hier
+            throw new NotImplementedException("Implementiere GetAccountNumber");
         }
         
         /// <summary>
@@ -45,9 +45,9 @@ namespace ChallengeTemplate
         /// <returns>Aktueller Saldo</returns>
         public decimal GetBalance()
         {
-            
             // Gib aktuellen Saldo zurück
             // Implementierung hier
+            throw new NotImplementedException("Implementiere GetBalance");
         }
         
         /// <summary>
@@ -69,11 +69,11 @@ namespace ChallengeTemplate
         /// <returns>true wenn erfolgreich, false wenn unzureichender Saldo</returns>
         public bool Withdraw(decimal amount)
         {
-            
             // Validiere Betrag (muss positiv sein)
             // Prüfe ausreichenden Saldo
             // Reduziere Saldo wenn möglich
             // Implementierung hier
+            throw new NotImplementedException("Implementiere Withdraw");
         }
         
         /// <summary>
@@ -81,9 +81,9 @@ namespace ChallengeTemplate
         /// </summary>
         public override string ToString()
         {
-            
             // Format: "Konto 12345: 1.500,00 €"
             // Implementierung hier
+            throw new NotImplementedException("Implementiere ToString");
         }
     }
     

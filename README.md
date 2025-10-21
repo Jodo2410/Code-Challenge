@@ -1,2 +1,2 @@
 # Code-Challenge
-Eine Größe liste an Code Challenge database für VS Code Extention.
+Eine große Liste an Code Challenge Datenbank für VS Code Extension.
