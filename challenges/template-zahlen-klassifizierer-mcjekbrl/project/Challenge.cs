@@ -15,8 +15,8 @@ namespace ChallengeTemplate
         /// <returns>Klassifikation als String</returns>
         public static string ClassifyNumber(int number)
         {
-            
             // Implementierung hier
+            throw new NotImplementedException("Implementiere ClassifyNumber");
         }
         
         /// <summary>

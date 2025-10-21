@@ -15,8 +15,8 @@ namespace ChallengeTemplate
         /// <returns>true wenn gerade, false wenn ungerade</returns>
         public static bool IsEven(int number)
         {
-            
             // Implementierung hier
+            throw new NotImplementedException("Implementiere IsEven");
         }
         
         /// <summary>

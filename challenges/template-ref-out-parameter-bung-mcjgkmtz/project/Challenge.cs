@@ -29,10 +29,10 @@ namespace ChallengeTemplate
         /// <returns>true wenn parsing erfolgreich</returns>
         public static bool TryParseAdvanced(string input, out int number, out bool isValid)
         {
-            
             // Setze number und isValid entsprechend
             // Verwende int.TryParse() als Basis
             // Implementierung hier
+            throw new NotImplementedException("Implementiere TryParseAdvanced");
         }
         
         /// <summary>

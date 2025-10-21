@@ -17,10 +17,10 @@ namespace ChallengeTemplate
         /// <returns>Neues Array ohne Duplikate</returns>
         public static int[] RemoveDuplicates(int[] numbers)
         {
-            
             // Verwende HashSet und List für die Lösung
             // Behandle null und leere Arrays
             // Implementierung hier
+            throw new NotImplementedException("Implementiere RemoveDuplicates");
         }
         
         /// <summary>

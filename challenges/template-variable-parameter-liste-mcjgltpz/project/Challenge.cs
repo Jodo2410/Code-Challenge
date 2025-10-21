@@ -16,10 +16,10 @@ namespace ChallengeTemplate
         /// <returns>Durchschnitt der Werte, 0.0 wenn keine Werte</returns>
         public static double CalculateAverage(params double[] values)
         {
-            
             // Behandle den Fall mit 0 Argumenten
             // Verwende params für variable Argumentanzahl
             // Implementierung hier
+            throw new NotImplementedException("Implementiere CalculateAverage");
         }
         
         /// <summary>
@@ -29,9 +29,9 @@ namespace ChallengeTemplate
         /// <returns>Maximum der Werte</returns>
         public static int FindMax(params int[] numbers)
         {
-            
             // Wirf Exception bei leerem Array
             // Implementierung hier
+            throw new NotImplementedException("Implementiere FindMax");
         }
         
         /// <summary>
